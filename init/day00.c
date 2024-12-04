@@ -47,8 +47,8 @@ void printMap (char **map) {
 // Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
 
 // Retrieve nth neighbor from a map
-int dy[] = { -1, -1, -1, 0, 0, 1, 1, 1};
-int dx[] = { -1, 0, 1, -1, 1, -1, 0, 1};
+int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
+int dx[] = { -1,  0,  1, 1, 1, 0, -1, -1};
 char mapnb(char **map, int y, int x, int n) {
 	assert((n>=0) && (n<8));
 	if((y+dy[n]<0) || (y+dy[n]>=MAXY) ||
