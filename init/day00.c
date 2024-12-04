@@ -46,7 +46,7 @@ void printMap (char **map) {
 // Full block character for maps █ and border elements ┃━┗┛┏┓
 // Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
 
-// Retrieve nth neighbor from a map
+// Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
 int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
 int dx[] = { -1,  0,  1, 1, 1, 0, -1, -1};
 char mapnb(char **map, int y, int x, int n) {
