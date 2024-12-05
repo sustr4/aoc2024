@@ -14,49 +14,17 @@
 //#define MAXX 10
 //#define MAXY 10
 
-// Rule structure definition
-typedef struct {
-	int need;
-	int want;
-} TRule;
-
 int **prints;
-TRule *rule;
 int **needs;
 
-// Comparator function example
+// Comparator function
 int comp(const void *a, const void *b)
 {
 	const int *da = (const int *) a;
 	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
-
-// Print a two-dimensional array
-void printMap (char **map) {
-	int x,y;
-	for(y=0; y<MAXY; y++) {
-		for(x=0; x<MAXX; x++) {
-			printf("%c", map[y][x]);
-		}
-		printf("\n");
-	}
-}
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
-
-// Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
-int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
-int dx[] = { -1,  0,  1, 1, 1, 0, -1, -1};
-char mapnb(char **map, int y, int x, int n) {
-	assert((n>=0) && (n<8));
-	if((y+dy[n]<0) || (y+dy[n]>=MAXY) ||
-	   (x+dx[n]<0) || (x+dx[n]>=MAXX)) return 0;
-	return(map[y+dy[n]][x+dx[n]]);
+	if(needs[*da][*db]) return 1;
+	if(needs[*db][*da]) return -1;
+	return 0;
 }
 
 // Read input file line by line (e.g., into an array)
@@ -72,37 +40,32 @@ int readInput() {
 		fprintf(stderr,"Failed to open input file\n");
 		exit(1); }
 
-	// Allocate one-dimensional array of strings
-	//char **rule=(char**)calloc(MAXX, sizeof(char*));
-	rule=(TRule*)calloc(MAXY, sizeof(TRule));
-
 	// Allocate a two-dimensional arrray of ints
 	prints=calloc(MAXY,sizeof(int*));
 	for(int iter=0; iter<MAXY; iter++) prints[iter]=calloc(MAXX,sizeof(int));
+	needs=calloc(100,sizeof(int*));
+	for(int iter=0; iter<100; iter++) needs[iter]=calloc(100,sizeof(int));
 
 	int rules=1;
 
 	while ((read = getline(&line, &len, input)) != -1) {
 		line[strlen(line)-1] = 0; // Truncate the NL
 
-		// Read into map
-		// for(x=0; x<MAXX; x++) map[y][x] = line[x];
-		// y++;
-
-		if(strlen(line)<1) {
+		if(strlen(line)<1) { // Empty line in the middle
 			count=0;
 			rules=0;
 			continue;
 		}
 
-		if(rules) {
+		if(rules) { // First part of input file
 			// Read into array
+			int want,need;
 			sscanf(line,"%d|%d",
-				&(rule[count].need),
-				&(rule[count].want));
+				&(need),
+				&(want));
+			needs[want][need]=1;
 		}
-		else {
-			// Read tokens from single line
+		else { // Second part of input file
 			char *token;
 			token = strtok(line, ",");
 			prints[count][0]=atoi(token);
@@ -120,88 +83,50 @@ int readInput() {
 	if (line)
 	free(line);
 
-//	printMap(map);
-
 	return 0;
-//	return rule;
-//	return map;
-}
-
-void printNeed(int *nd, int *isinline) {
-	for(int i=0; i<MAXX;i++) {
-		if(nd[i] && isinline[i]) printf("%d,",i);
-	}
-	printf("\n");
 }
 
 int checkLine(int *line,int count) {
 	int i,j;
-
 	int isinline[100];
 
 	memset(isinline,0,100*sizeof(int));
-
 	for(i=0;i<count;i++) isinline[line[i]]=1;
 
 	for(i=0; i<count; i++) {
-		int *nd=malloc(MAXX*sizeof(int));
-		memcpy(nd,needs[line[i]],MAXX*sizeof(int));
-		printf("%d needs:  ",line[i]); printNeed(nd,isinline);
-		for(j=0; j<i; j++) {
-			nd[line[j]]=0;
-		}
-		printf("%d remain: ",line[i]); printNeed(nd,isinline);
+		int *nd=malloc(100*sizeof(int));
+		memcpy(nd,needs[line[i]],100*sizeof(int));
+		for(j=0; j<i; j++) nd[line[j]]=0;
 		for(j=0; j<100; j++) 
 			if(isinline[j] && nd[j]) {
 				free(nd);
-				printf("unsat\n");
 				return 0;
 			}
 		free(nd);
 	}
-	printf("(%d,%d) \n",count,count/2);
 	return line[count/2];
 }
 
 int main(int argc, char *argv[]) {
 
-//	TRule *array;
-	int i=0,j;
+	int i=0;
 	int count[MAXY];
-//	array = readInput();
 	readInput();
 
-	needs=calloc(MAXY,sizeof(int*));
-	for(int iter=0; iter<MAXY; iter++) needs[iter]=calloc(MAXX,sizeof(int));
-
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-	for(i=0; rule[i].want; i++) {
-//		printf("%d <- %d\n", rule[i].need, rule[i].want);
-		needs[rule[i].want][rule[i].need]=1;
-	}
-
-	for(i=0; prints[i][0]; i++) {
-		for(j=0; prints[i][j]; j++) {
-//			printf("%d,", prints[i][j]);
-		}
-		count[i]=j;
-//		printf(" (%d)\n", count[i]);
-	}
-
 	int sum=0;
+	int sum2=0;
 	int res;
 	for(i=0; prints[i][0]; i++) {
-		for(j=0; prints[i][j]; j++);
-//			printf("%d,", prints[i][j]);
-//		}
-		count[i]=j;
+		for(count[i]=0; prints[i][count[i]]; count[i]++);
 		res=checkLine(prints[i],count[i]);
-		printf(" (%d)\n", res);
 		sum+=res;
+		if(!res) {
+			qsort(prints[i],count[i],sizeof(int),comp);
+			sum2+=prints[i][count[i]/2];
+		}
+
 	}
 
-
-	printf("%d\n", sum);
-
+	printf("Already sorted: %d\nNeeded sorting: %d\n", sum,sum2);
 	return 0;
 }
