@@ -19,18 +19,7 @@ typedef struct {
 	int x;
 	int y;
 } TPoint;
-
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
+int dir;
 
 // Print a two-dimensional array
 void printMap (char **map) {
@@ -43,18 +32,23 @@ void printMap (char **map) {
 	}
 }
 
-void printVis (char **map) {
+void printVis (char ***map, char **m) {
 	int x,y;
+	printf("\n");
 	for(y=0; y<MAXY; y++) {
 		for(x=0; x<MAXX; x++) {
-			if(map[y][x]) printf("#");
+			int cnt=0;
+			for(int i=0;i<8;i++) if(map[y][x][i]) cnt++;
+			if(map[y][x]) printf("%d",cnt);
 			else printf(" ");
+		}
+		printf("  ");
+		for(x=0; x<MAXX; x++) {
+			printf("%c", m[y][x]);
 		}
 		printf("\n");
 	}
 }
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
 
 // Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
 int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
@@ -68,21 +62,15 @@ char mapnb(char **map, int y, int x, int n) {
 
 // Read input file line by line (e.g., into an array)
 char **readInput() {
-//int readInput() {
 	FILE * input;
 	char * line = NULL;
 	size_t len = 0;
 	ssize_t read;
-	int count = 0;
 
 	input = fopen(INPUT, "r");
 	if (input == NULL) {
 		fprintf(stderr,"Failed to open input file\n");
 		exit(1); }
-
-	// Allocate one-dimensional array of strings
-	// char **inst=(char**)calloc(MAXX, sizeof(char*));
-	// TPoint *inst=(TPoint*)calloc(MAXX, sizeof(TPoint));
 
 	// Allocate a two-dimensional arrray of chars
 	int x=0, y=0;
@@ -95,85 +83,88 @@ char **readInput() {
 		//Read into map
 		for(x=0; x<MAXX; x++) map[y][x] = line[x];
 		y++;
-
-		// Copy to string
-		//asprintf(&(inst[count]), "%s", line);	
-
-		// Read into array
-		// sscanf(line,"%d,%d",
-		//	&(inst[count].x),
-		//	&(inst[count].y));
-
-		// Read tokens from single line
-		//char *token;
-		//token = strtok(line, ",");
-		//while( 1 ) {
-		//	if(!(token = strtok(NULL, ","))) break;
-		//}
-
-		count++;
 	}
 
 	fclose(input);
 	if (line)
 	free(line);
 
-	printMap(map);
+//	printMap(map);
 
 	return map;
 }
 
-TPoint move(TPoint guard, char **map, char **visited) {
-	static int dir=1;
+TPoint move(TPoint guard, char **map, char ***visited) {
 	TPoint ret=guard;
 
-	visited[guard.y][guard.x]=1;
+        if((guard.x<0) || (guard.x>=MAXX) ||
+           (guard.y<0) || (guard.y>=MAXY)) {
+		ret.x=-2;
+		ret.y=-2;
+		return ret;
+	}
+
+	if(visited[guard.y][guard.x][dir]) {
+		ret.x=-1;
+		ret.y=-1;
+		return ret;
+	}
+
+
+	visited[guard.y][guard.x][dir]=1;
 	if(mapnb(map,guard.y,guard.x,dir)!='#') {
 		ret.x+=dx[dir];
 		ret.y+=dy[dir]; }
 	else {
 		dir=(dir+2)%8;
 	}
-	
 	return ret;
 }
 
 int main(int argc, char *argv[]) {
 
-//	TPoint *array;
-//	int i=0;	
-//	array = readInput();
 	char **map=readInput();
-	int x,y;
+	int x,y,count=0;
 	TPoint guard={ -1, -1};
-	char **visited=calloc(MAXY,sizeof(char*));
-	for(int iter=0; iter<MAXY; iter++) visited[iter]=calloc(MAXX,sizeof(char));
-	
+	char ***visited=calloc(MAXY,sizeof(char**));
+	for(int iter=0; iter<MAXY; iter++) {
+		visited[iter]=calloc(MAXX,sizeof(char*));
+		for(int iiter=0; iiter<MAXX; iiter++) {
+			visited[iter][iiter]=calloc(8,sizeof(char));
+		}
+	}
+
 	for(y=0; y<MAXY; y++)
 		for(x=0; x<MAXX; x++)
 			if(map[y][x]=='^') {
 				guard.y=y;
-				guard.x=x; }
+				guard.x=x; 
+				map[y][x]='.'; }
 
-	while(1) {
-		printf("Guard: [%d,%d]\n",guard.y,guard.x);
-		guard=move(guard,map,visited);
-		if((guard.x<0) || (guard.x>=MAXX) ||
-		   (guard.y<0) || (guard.y>=MAXY)) break;
+	TPoint orig=guard;
+
+	TPoint obs;
+	for(obs.y=0; obs.y<MAXY; obs.y++) {
+		for(obs.x=0; obs.x<MAXX; obs.x++) {
+			guard=orig; dir=1;
+			if(map[obs.y][obs.x]=='#') continue;
+			map[obs.y][obs.x]='#';
+			while(1) {
+				guard=move(guard,map,visited);
+				if(guard.x<0) break;
+			}
+			if(guard.y==-1) {
+				count++;
+				//printVis(visited, map);
+			}
+			map[obs.y][obs.x]='.';
+			for(int iter=0; iter<MAXY; iter++) {
+				for(int iiter=0; iiter<MAXX; iiter++) {
+					memset(visited[iter][iiter],0,8*sizeof(char));
+				}
+			}
+		}
 	}
-
-
-
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-//	for(i=0; array[i]; i++) {
-//		printf("%d\n", array[i]);
-//	}
-	int count=0;
-	for(y=0; y<MAXY; y++)
-		for(x=0; x<MAXX; x++)
-			if(visited[y][x]) count++;
-
-	printVis(visited);
 
 	printf("Count: %d\n", count);
 
