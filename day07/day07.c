@@ -8,32 +8,11 @@
 
 // Boundary and input file definitions, set as required
 #define INPUT "input.txt"
-//#define INPUT "unit2.txt"
+//#define INPUT "unit1.txt"
 #define MAXX 100
 #define MAXY 1000
-//#define MAXX 10
-//#define MAXY 10
-
-// Point structure definition
-typedef struct {
-	int x;
-	int y;
-	int z;
-} TPoint;
 
 int *check;
-
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
 
 // Print a two-dimensional array
 void printArray (long long **array) {
@@ -46,18 +25,6 @@ void printArray (long long **array) {
 		}
 		printf("\n");
 	}
-}
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
-
-// Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
-int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
-int dx[] = { -1,  0,  1, 1, 1, 0, -1, -1};
-char mapnb(char **map, int y, int x, int n) {
-	assert((n>=0) && (n<8));
-	if((y+dy[n]<0) || (y+dy[n]>=MAXY) ||
-	   (x+dx[n]<0) || (x+dx[n]>=MAXX)) return 0;
-	return(map[y+dy[n]][x+dx[n]]);
 }
 
 // Read input file line by line (e.g., into an array)
@@ -73,10 +40,6 @@ long long **readInput() {
 		fprintf(stderr,"Failed to open input file\n");
 		exit(1); }
 
-	// Allocate one-dimensional array of strings
-	// char **inst=(char**)calloc(MAXX, sizeof(char*));
-	// TPoint *inst=(TPoint*)calloc(MAXX, sizeof(TPoint));
-
 	// Allocate a two-dimensional arrray of chars
 	int x=0;
 	long long **map=calloc(MAXY,sizeof(long long*));
@@ -85,18 +48,6 @@ long long **readInput() {
 
 	while ((read = getline(&line, &len, input)) != -1) {
 		line[strlen(line)-1] = 0; // Truncate the NL
-
-		// Read into map
-		// for(x=0; x<MAXX; x++) map[y][x] = line[x];
-		// y++;
-
-		// Copy to string
-		//asprintf(&(inst[count]), "%s", line);	
-
-		// Read into array
-		// sscanf(line,"%d,%d",
-		//	&(inst[count].x),
-		//	&(inst[count].y));
 
 		// Read tokens from single line
 		char *token;
@@ -116,15 +67,11 @@ long long **readInput() {
 	if (line)
 	free(line);
 
-//	printMap(map);
-
-//	return inst;
 	return map;
 }
 
 int try(long long **formula, int line, int depth, long long sum) {
 	if(!formula[line][depth]) { // The calculation should be finished
-//		printf("%lld == %lld?\n", formula[line][0], sum);
 		if(formula[line][0]==sum) {
 			check[line]++;
 			return 1;
@@ -134,6 +81,11 @@ int try(long long **formula, int line, int depth, long long sum) {
 	if(sum>formula[line][0]) return 0; // Grew too big
 	if(try(formula, line, depth + 1, sum + formula[line][depth])) return 1;
 	if(try(formula, line, depth + 1, sum * formula[line][depth])) return 1;
+	char *conc;
+	asprintf(&conc,"%lld%lld",sum,formula[line][depth]);
+	long long next = atoll(conc);
+	free(conc);
+	if(try(formula, line, depth + 1, next)) return 1;
 	return 0;
 }
 
@@ -141,8 +93,6 @@ int main(int argc, char *argv[]) {
 
 	int i=0;	
 	long long **array = readInput();
-
-//	printArray(array);
 
 	long long sum=0;
 	for(i=0; array[i][0]; i++) {
@@ -155,11 +105,6 @@ int main(int argc, char *argv[]) {
 		printf("\n");
 	}
 	printf("Sum %lld\n", sum);
-
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-//	for(i=0; array[i]; i++) {
-//		printf("%d\n", array[i]);
-//	}
 
 	return 0;
 }
