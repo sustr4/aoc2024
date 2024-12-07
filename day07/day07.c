@@ -8,7 +8,7 @@
 
 // Boundary and input file definitions, set as required
 #define INPUT "input.txt"
-//#define INPUT "unit1.txt"
+//#define INPUT "unit2.txt"
 #define MAXX 100
 #define MAXY 1000
 //#define MAXX 10
@@ -40,7 +40,9 @@ void printArray (long long **array) {
 	int x,y;
 	for(y=0; array[y][0]; y++) {
 		for(x=0; array[y][x]; x++) {
-			printf("%lld ", array[y][x]);
+			printf("%lld", array[y][x]);
+			if(!x) printf(": ");
+			else if(array[y][x+1]) printf(" ");
 		}
 		printf("\n");
 	}
@@ -120,14 +122,16 @@ long long **readInput() {
 	return map;
 }
 
-int try(long long **formula, int line, int depth, int sum) {
+int try(long long **formula, int line, int depth, long long sum) {
 	if(!formula[line][depth]) { // The calculation should be finished
+//		printf("%lld == %lld?\n", formula[line][0], sum);
 		if(formula[line][0]==sum) {
 			check[line]++;
 			return 1;
 		}
 		return 0;
 	}
+	if(sum>formula[line][0]) return 0; // Grew too big
 	if(try(formula, line, depth + 1, sum + formula[line][depth])) return 1;
 	if(try(formula, line, depth + 1, sum * formula[line][depth])) return 1;
 	return 0;
@@ -135,12 +139,10 @@ int try(long long **formula, int line, int depth, int sum) {
 
 int main(int argc, char *argv[]) {
 
-//	TPoint *array;
 	int i=0;	
-//	array = readInput();
 	long long **array = readInput();
 
-	printArray(array);
+//	printArray(array);
 
 	long long sum=0;
 	for(i=0; array[i][0]; i++) {
@@ -148,7 +150,7 @@ int main(int argc, char *argv[]) {
 		printf("%d: %d", i, check[i]);
 		if(check[i]) {
 			sum+=array[i][0];
-			printf(" (%lld)", array[i][0]);
+			printf("(%lld)", array[i][0]);
 		}
 		printf("\n");
 	}
