@@ -37,7 +37,8 @@ void printMap (char **map) {
 	int x,y;
 	for(y=0; y<MAXY; y++) {
 		for(x=0; x<MAXX; x++) {
-			printf("%c", map[y][x]);
+			if(map[y][x]==0) printf(".");
+			else printf("%c", map[y][x]);
 		}
 		printf("\n");
 	}
@@ -141,6 +142,40 @@ int readBeacons(char **map, TPoint **beac, int *count) {
 	return 0;
 }
 
+int addAntinode(char **antinodes, int y, int x) {
+	if(y<0) return 0;
+	if(x<0) return 0;
+	if(y>=MAXY) return 0;
+	if(x>=MAXX) return 0;
+
+	antinodes[y][x]='X';
+	return 1;
+}
+
+int findAntinodes(TPoint **beac, int *count, char **antinodes) {
+	int k, i, j;
+	for(k=0; k<'z'; k++) {
+		if(count[(int)k]) {
+
+			TPoint *set=beac[k];
+			int cnt=count[k];
+
+			for(i=0; i<cnt; i++) {
+				for(j=i+1; j<cnt; j++) {
+					addAntinode(antinodes,
+						2*set[i].y-set[j].y,
+						2*set[i].x-set[j].x);
+					addAntinode(antinodes,
+						2*set[j].y-set[i].y,
+						2*set[j].x-set[i].x);
+				}
+			}
+		}
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
 
 //	TPoint *array;
@@ -153,13 +188,15 @@ int main(int argc, char *argv[]) {
 
 	int *count=calloc((int)'z',sizeof(int));
 	
-	char **antinode=calloc(MAXY,sizeof(char*));
-	for(int iter=0; iter<MAXY; iter++) antinode[iter]=calloc(MAXX,sizeof(char));
+	char **antinodes=calloc(MAXY,sizeof(char*));
+	for(int iter=0; iter<MAXY; iter++) antinodes[iter]=calloc(MAXX,sizeof(char));
 
 	char **map=readInput();
 	readBeacons(map, beac, count);
 	printBeacons (beac, count);
+	findAntinodes(beac, count, antinodes);
 
+	printMap(antinodes);
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
 //	for(i=0; array[i]; i++) {
 //		printf("%d\n", array[i]);
