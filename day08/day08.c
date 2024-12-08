@@ -35,13 +35,16 @@ int comp(const void *a, const void *b)
 // Print a two-dimensional array
 void printMap (char **map) {
 	int x,y;
+	int xes=0;
 	for(y=0; y<MAXY; y++) {
 		for(x=0; x<MAXX; x++) {
 			if(map[y][x]==0) printf(".");
 			else printf("%c", map[y][x]);
+			if(map[y][x]=='X') xes++;
 		}
 		printf("\n");
 	}
+	printf("No of Xes: %d\n", xes);
 }
 
 void printBeacons (TPoint **beac, int *count) {
@@ -162,12 +165,11 @@ int findAntinodes(TPoint **beac, int *count, char **antinodes) {
 
 			for(i=0; i<cnt; i++) {
 				for(j=i+1; j<cnt; j++) {
-					addAntinode(antinodes,
-						2*set[i].y-set[j].y,
-						2*set[i].x-set[j].x);
-					addAntinode(antinodes,
-						2*set[j].y-set[i].y,
-						2*set[j].x-set[i].x);
+					for(int iter=-MAXX; iter<MAXX; iter++) {
+						addAntinode(antinodes,
+							set[i].y+iter*(set[i].y-set[j].y),
+							set[i].x+iter*(set[i].x-set[j].x));
+					}
 				}
 			}
 		}
