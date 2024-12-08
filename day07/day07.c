@@ -81,11 +81,16 @@ int try(long long **formula, int line, int depth, long long sum) {
 	if(sum>formula[line][0]) return 0; // Grew too big
 	if(try(formula, line, depth + 1, sum + formula[line][depth])) return 1;
 	if(try(formula, line, depth + 1, sum * formula[line][depth])) return 1;
-	char *conc;
+	long long fac=1;
+	while(fac<=formula[line][depth]) fac*=(long long)10;
+//	printf("%lld * %lld + %lld = %lld == %lld%lld ?\n", sum, fac, formula[line][depth], fac * sum + formula[line][depth], sum, formula[line][depth]);
+	if(try(formula, line, depth + 1, fac * sum + formula[line][depth])) return 1;/**/
+
+/*	char *conc;
 	asprintf(&conc,"%lld%lld",sum,formula[line][depth]);
 	long long next = atoll(conc);
 	free(conc);
-	if(try(formula, line, depth + 1, next)) return 1;
+	if(try(formula, line, depth + 1, next)) return 1;*/
 	return 0;
 }
 
@@ -95,14 +100,15 @@ int main(int argc, char *argv[]) {
 	long long **array = readInput();
 
 	long long sum=0;
+	i=680;
 	for(i=0; array[i][0]; i++) {
 		try(array, i, 2, array[i][1]);
-		printf("%d: %d", i, check[i]);
+//		printf("%d: %d", i, check[i]);
 		if(check[i]) {
 			sum+=array[i][0];
-			printf("(%lld)", array[i][0]);
+//			printf("(%lld)", array[i][0]);
 		}
-		printf("\n");
+//		printf("\n");
 	}
 	printf("Sum %lld\n", sum);
 
