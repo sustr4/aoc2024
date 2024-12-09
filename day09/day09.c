@@ -10,51 +10,15 @@
 #define INPUT "input.txt"
 #define MAXX 76
 #define MAXY 100000
-//#define INPUT "unit1.txt"
-//#define MAXX 10
-//#define MAXY 10
 
 // Point structure definition
 typedef struct {
-	int x;
-	int y;
-	int z;
+	int start;
+	int length;
 } TFile;
 
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
-
-// Print a two-dimensional array
-void printMap (char **map) {
-	int x,y;
-	for(y=0; y<MAXY; y++) {
-		for(x=0; x<MAXX; x++) {
-			printf("%c", map[y][x]);
-		}
-		printf("\n");
-	}
-}
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
-
-// Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
-int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
-int dx[] = { -1,  0,  1, 1, 1, 0, -1, -1};
-char mapnb(char **map, int y, int x, int n) {
-	assert((n>=0) && (n<8));
-	if((y+dy[n]<0) || (y+dy[n]>=MAXY) ||
-	   (x+dx[n]<0) || (x+dx[n]>=MAXX)) return 0;
-	return(map[y+dy[n]][x+dx[n]]);
-}
+TFile *spaces;
+TFile *files;
 
 // Read input file line by line (e.g., into an array)
 int *readInput() {
@@ -70,13 +34,6 @@ int *readInput() {
 		exit(1); }
 
 	int *disk=(int*)calloc(MAXY, sizeof(int));
-	// TFile *inst=(TFile*)calloc(MAXX, sizeof(TFile));
-
-	// Allocate a two-dimensional arrray of chars
-	// int x=0, y=0;
-	// char **map=calloc(MAXY,sizeof(char*));
-	// for(int iter=0; iter<MAXY; iter++) map[iter]=calloc(MAXX,sizeof(char));
-
 
 	int leng=0;
 	int idx=0;
@@ -86,36 +43,28 @@ int *readInput() {
 
 		// Read into map
 		int file=1;
+		int space=0, flno=0;
 		for(int x=0; x<strlen(line); x++) {
-			leng+=line[x]-'0';
 			if(file) {
 				for(int i=0; i<line[x]-'0'; i++)
 					disk[idx++]=fid;
 				fid++;
+				files[flno].start=leng;
+				files[flno].length=line[x]-'0';
+				flno++;
 			}
-			else idx+=line[x]-'0';
-			file=!file;	
+			else {
+				idx+=line[x]-'0';
+				spaces[space].start=leng;
+				spaces[space].length=line[x]-'0';
+				space++;
+			}
+			file=!file;
+			leng+=line[x]-'0';
 		}
-
-		// Copy to string
-		//asprintf(&(inst[count]), "%s", line);	
-
-		// Read into array
-		// sscanf(line,"%d,%d",
-		//	&(inst[count].x),
-		//	&(inst[count].y));
-
-		// Read tokens from single line
-		//char *token;
-		//token = strtok(line, ",");
-		//while( 1 ) {
-		//	if(!(token = strtok(NULL, ","))) break;
-		//}
 
 		count++;
 	}
-//	printf("The disk is %d long.\n", leng);
-
 	fclose(input);
 	if (line)
 	free(line);
@@ -125,29 +74,44 @@ int *readInput() {
 
 int main(int argc, char *argv[]) {
 
-//	TFile *array;
-	int *disk=readInput();
+	spaces=calloc(10001,sizeof(TFile));
+	files=calloc(10001,sizeof(TFile));
+	int *disk=readInput();	
 
-	int idx=0;
 	int block;
-	for(block=MAXY;block>0;block--) {
-		if(!disk[block]) continue;
-		while(disk[idx]) idx++; //First free space
-		if(idx>block) break;
-		disk[idx]=disk[block];
-		disk[block]=0;
+	int fcount;
+
+	for(fcount=1; files[fcount+1].start; fcount++) {
+//		printf("File No. %d starts at %d and is %d long. ", fcount, files[fcount].start, files[fcount].length);
+//		printf("Space No. %d starts at %d and is %d long.\n", fcount, spaces[fcount].start, spaces[fcount].length);
 	}
-	for(idx=0;idx<MAXY;idx++) printf("%d\n", disk[idx]);
+
+	int f;
+	int s;
+
+	for(f=fcount; f>0; f--) {
+		for(s=0; s<10000; s++) {
+			if(spaces[s].length>=files[f].length) break;
+		}
+		if(!spaces[s].start) continue;
+		if(spaces[s].start>files[f].start) continue;
+		printf("Moving file %d (%d bytes, header \"%d\") from %d ",f ,files[f].length, disk[files[f].start], files[f].start);
+		printf("to space %d (%d bytes) at %d\n",s ,spaces[s].length, spaces[s].start);	
+		memcpy(&(disk[spaces[s].start]), &(disk[files[f].start]), files[f].length*sizeof(int));
+		memset(&(disk[files[f].start]),0,files[f].length*sizeof(int));
+
+		files[f].start=spaces[s].start;
+		spaces[s].start+=files[f].length;
+		spaces[s].length-=files[f].length;
+	}
+
 	long sum=0;
-	for(block=0;disk[block];block++) {
-		sum+=block*(disk[block]-1);
+        for(block=0;block < MAXY;block++) {
+		if(!disk[block]) continue;
+                sum+=block*(disk[block]-1); 
 	}
-	printf("Sum %ld\n", sum);
-
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-//	for(i=0; array[i]; i++) {
-//		printf("%d\n", array[i]);
-//	}
-
+        printf("Sum %ld\n", sum);
+	
+	
 	return 0;
 }
