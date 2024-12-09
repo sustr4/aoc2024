@@ -110,8 +110,14 @@ int main(int argc, char *argv[]) {
 		if(!disk[block]) continue;
                 sum+=block*(disk[block]-1); 
 	}
-        printf("Sum %ld\n", sum);
+        printf("Sum one way (on disk)      %ld\n", sum);
 	
+	sum=0;
+	for(f=fcount; f>0; f--) {
+		for(int i=files[f].start; i<files[f].start+files[f].length; i++)
+			sum+=f*i;
+	}
+        printf("Sum another way (from FAT) %ld\n", sum);
 	
 	return 0;
 }
