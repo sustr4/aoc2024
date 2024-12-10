@@ -14,28 +14,6 @@
 //#define MAXX 10
 //#define MAXY 10
 
-// Point structure definition
-typedef struct {
-	int x;
-	int y;
-	int z;
-} TPoint;
-
-int altsum=0;
-int hx[10], hy[10];
-
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
-
 // Print a two-dimensional array
 void printMap (char **map) {
 	int x,y;
@@ -46,8 +24,6 @@ void printMap (char **map) {
 		printf("\n");
 	}
 }
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
 
 // Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
 int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
@@ -65,16 +41,11 @@ char **readInput() {
 	char * line = NULL;
 	size_t len = 0;
 	ssize_t read;
-	int count = 0;
 
 	input = fopen(INPUT, "r");
 	if (input == NULL) {
 		fprintf(stderr,"Failed to open input file\n");
 		exit(1); }
-
-	// Allocate one-dimensional array of strings
-	// char **inst=(char**)calloc(MAXX, sizeof(char*));
-	// TPoint *inst=(TPoint*)calloc(MAXX, sizeof(TPoint));
 
 	// Allocate a two-dimensional arrray of chars
 	int x=0, y=0;
@@ -87,67 +58,32 @@ char **readInput() {
 		// Read into map
 		for(x=0; x<MAXX; x++) map[y][x] = line[x];
 		y++;
-
-		// Copy to string
-		//asprintf(&(inst[count]), "%s", line);	
-
-		// Read into array
-		// sscanf(line,"%d,%d",
-		//	&(inst[count].x),
-		//	&(inst[count].y));
-
-		// Read tokens from single line
-		//char *token;
-		//token = strtok(line, ",");
-		//while( 1 ) {
-		//	if(!(token = strtok(NULL, ","))) break;
-		//}
-
-		count++;
 	}
 
 	fclose(input);
 	if (line)
 	free(line);
 
-//	printMap(map);
-
 	return map;
 }
 
 int step(char** map, int y, int x, int* count, char **visited) {
-	hx[map[y][x]-'0']=x;
-	hy[map[y][x]-'0']=y;
 	if(map[y][x]=='9') {
 		*count=*count+1;
 		visited[y][x]=1;
-//		for(int i=0; i<=9; i++) printf("[%d,%d] ", hy[i], hx[i]);
-//		printf("\n");
 		return 1;
 	}
 
 	int n;
-	for(n=1; n<8; n+=2) {
-		if(mapnb(map, y, x, n)==map[y][x]+1) {
-//			printf("Stepping from [%d,%d] (%c) to [%d,%d].\n",
-//				y, x, map[y][x],
-				
+	for(n=1; n<8; n+=2)
+		if(mapnb(map, y, x, n)==map[y][x]+1)
 			step(map, y+dy[n], x+dx[n], count, visited);
-		}
-	}
-
 	return 0;
 }
 
 int main(int argc, char *argv[]) {
-
-//	TPoint *array;
-//	int i=0;	
-//	array = readInput();
 	char **map=readInput();
-
-	int x,y,sum=0;
-
+	int x,y,sum=0, altsum=0;
 
 	for(y=0; y<MAXY; y++) {
 		for(x=0; x<MAXX; x++) {
@@ -159,20 +95,14 @@ int main(int argc, char *argv[]) {
 				for(int i=0; i<MAXY; i++)
 					for(int j=0; j<MAXX; j++)
 						if(visited[i][j]) altcount++;
+				sum+=count;
 				altsum+=altcount;
-				printf("[%d,%d]: %d (%d)\n", y, x, count, altcount);
 				for(int iter=0; iter<MAXY; iter++) free(visited[iter]);
-free(visited);
+				free(visited);
 			}
 		}
 	}
-	
 
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-//	for(i=0; array[i]; i++) {
-//		printf("%d\n", array[i]);
-//	}
-
-	printf("Sum: %d (%d)\n", sum, altsum);
+	printf("Sum Task 1: %d\nSum Task 2: %d\n", altsum, sum);
 	return 0;
 }
