@@ -7,12 +7,12 @@
 #include<assert.h>
 
 // Boundary and input file definitions, set as required
-//#define INPUT "input.txt"
-//#define MAXX 140
-//#define MAXY 140
-#define INPUT "unit1.txt"
-#define MAXX 10
-#define MAXY 10
+#define INPUT "input.txt"
+#define MAXX 140
+#define MAXY 140
+//#define INPUT "unit1.txt"
+//#define MAXX 10
+//#define MAXY 10
 
 // Point structure definition
 typedef struct {
@@ -34,7 +34,7 @@ int comp(const void *a, const void *b)
 
 
 // Print a two-dimensional array
-void printMap (char **map, int **region) {
+void printMap (char **map, int **region, int **fences) {
 	int x,y;
 	for(y=0; y<MAXY; y++) {
 		for(x=0; x<MAXX; x++) {
@@ -43,6 +43,10 @@ void printMap (char **map, int **region) {
 		printf("  ");
 		for(x=0; x<MAXX; x++) {
 			printf("%d", region[y][x]%10);
+		}
+		printf("  ");
+		for(x=0; x<MAXX; x++) {
+			printf("%d", fences[y][x]);
 		}
 		printf("\n");
 	}
@@ -153,6 +157,26 @@ void countRegions(int **region, int *size) {
 	}
 }
 
+void countFences(char **map, int **fences) {
+	int x, y;
+	for(y=0;y<MAXY;y++) {
+		for(x=0;x<MAXX;x++) {
+			fences[y][x]=4;
+			for(int n=1; n<8; n+=2) {
+				if(mapnb(map,y,x,n)==map[y][x]) fences[y][x]--;
+			}
+		}
+	}
+}
+
+int worth(int *size, int **region, int **fences) {
+	int sum=0;
+	int x, y;
+	for(y=0;y<MAXY;y++)
+		for(x=0;x<MAXX;x++) sum+=size[region[y][x]]*fences[y][x];
+	return sum;
+}
+
 int main(int argc, char *argv[]) {
 
 	int discover=1,x,y;	
@@ -161,6 +185,9 @@ int main(int argc, char *argv[]) {
 
 	int **region=calloc(MAXY,sizeof(int*));
 	for(int iter=0; iter<MAXY; iter++) region[iter]=calloc(MAXX,sizeof(int));
+
+	int **fences=calloc(MAXY,sizeof(int*));
+	for(int iter=0; iter<MAXY; iter++) fences[iter]=calloc(MAXX,sizeof(int));
 
 	for(y=0;y<MAXY;y++) {
 		for(x=0;x<MAXX;x++) {
@@ -173,9 +200,12 @@ int main(int argc, char *argv[]) {
 	int *size = calloc(discover+1, sizeof(int));
 	countRegions(region, size);
 
-	printMap(map,region);
+	countFences(map, fences);
+
+	printMap(map,region,fences);
 	for(int i=1; size[i]; i++) printf("Region %3d, size %d\n", i, size[i]);
 
+	printf("Total price %d\n", worth(size, region, fences));
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
 //	for(i=0; array[i]; i++) {
 //		printf("%d\n", array[i]);
