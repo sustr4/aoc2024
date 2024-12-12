@@ -14,27 +14,8 @@
 //#define MAXX 10
 //#define MAXY 10
 
-// Point structure definition
-typedef struct {
-	int x;
-	int y;
-	int z;
-} TPoint;
-
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
-
 // Print a two-dimensional array
-void printMap (char **map, int **region, int **fences) {
+void printMap (char **map, int **region, int ***fence) {
 	int x,y;
 	for(y=0; y<MAXY; y++) {
 		for(x=0; x<MAXX; x++) {
@@ -46,7 +27,9 @@ void printMap (char **map, int **region, int **fences) {
 		}
 		printf("  ");
 		for(x=0; x<MAXX; x++) {
-			printf("%d", fences[y][x]);
+			if(fence[y][x][7]) printf("┃");
+			else printf(" ");
+			printf("%c", map[y][x]);
 		}
 		printf("\n");
 	}
@@ -76,16 +59,11 @@ char **readInput() {
 	char * line = NULL;
 	size_t len = 0;
 	ssize_t read;
-	int count = 0;
 
 	input = fopen(INPUT, "r");
 	if (input == NULL) {
 		fprintf(stderr,"Failed to open input file\n");
 		exit(1); }
-
-	// Allocate one-dimensional array of strings
-	// char **inst=(char**)calloc(MAXX, sizeof(char*));
-	// TPoint *inst=(TPoint*)calloc(MAXX, sizeof(TPoint));
 
 	// Allocate a two-dimensional arrray of chars
 	int x=0, y=0;
@@ -99,22 +77,6 @@ char **readInput() {
 		for(x=0; x<MAXX; x++) map[y][x] = line[x];
 		y++;
 
-		// Copy to string
-		//asprintf(&(inst[count]), "%s", line);	
-
-		// Read into array
-		// sscanf(line,"%d,%d",
-		//	&(inst[count].x),
-		//	&(inst[count].y));
-
-		// Read tokens from single line
-		//char *token;
-		//token = strtok(line, ",");
-		//while( 1 ) {
-		//	if(!(token = strtok(NULL, ","))) break;
-		//}
-
-		count++;
 	}
 
 	fclose(input);
@@ -157,23 +119,60 @@ void countRegions(int **region, int *size) {
 	}
 }
 
-void countFences(char **map, int **fences) {
+void countFences(char **map, int ***fence) {
 	int x, y;
 	for(y=0;y<MAXY;y++) {
 		for(x=0;x<MAXX;x++) {
-			fences[y][x]=4;
 			for(int n=1; n<8; n+=2) {
-				if(mapnb(map,y,x,n)==map[y][x]) fences[y][x]--;
+				if(mapnb(map,y,x,n)!=map[y][x]) fence[y][x][n]=1;
 			}
 		}
 	}
 }
 
-int worth(int *size, int **region, int **fences) {
+void reduceFences(char **map, int ***fence) {
+	int x, y;
+	// Left to right
+	for(y=0;y<MAXY;y++) {
+		for(x=MAXX-1;x>0;x--) {
+			if((map[y][x]==map[y][x-1]) &&
+			    fence[y][x-1][1]) fence[y][x][1]=0;
+			if((map[y][x]==map[y][x-1]) &&
+			    fence[y][x-1][5]) fence[y][x][5]=0;
+		}
+	}
+
+	// Top to bottom
+	for(x=0;x<MAXX;x++) {
+		for(y=MAXY-1;y>0;y--) {
+			if((map[y][x]==map[y-1][x]) &&
+			    fence[y-1][x][3]) fence[y][x][3]=0;
+			if((map[y][x]==map[y-1][x]) &&
+			    fence[y-1][x][7]) fence[y][x][7]=0;
+		}
+	}
+	
+}
+
+int worth(int *size, int **region, int ***fence) {
 	int sum=0;
 	int x, y;
 	for(y=0;y<MAXY;y++)
-		for(x=0;x<MAXX;x++) sum+=size[region[y][x]]*fences[y][x];
+		for(x=0;x<MAXX;x++)
+			for(int n=1; n<8; n+=2) 
+				sum+=size[region[y][x]]*fence[y][x][n];
+	return sum;
+}
+
+int sides(int r, int **region, int ***fence) {
+	int sum=0;
+	int x, y;
+	for(y=0;y<MAXY;y++)
+		for(x=0;x<MAXX;x++) {
+			if(region[y][x]!=r) continue;
+			for(int n=1; n<8; n+=2) 
+				sum+=fence[y][x][n];
+		}
 	return sum;
 }
 
@@ -186,8 +185,11 @@ int main(int argc, char *argv[]) {
 	int **region=calloc(MAXY,sizeof(int*));
 	for(int iter=0; iter<MAXY; iter++) region[iter]=calloc(MAXX,sizeof(int));
 
-	int **fences=calloc(MAXY,sizeof(int*));
-	for(int iter=0; iter<MAXY; iter++) fences[iter]=calloc(MAXX,sizeof(int));
+	int ***fence=calloc(MAXY,sizeof(int**));
+	for(int iter=0; iter<MAXY; iter++) {
+		fence[iter]=calloc(MAXX,sizeof(int*));
+		for(int iter2=0; iter2<MAXX; iter2++) fence[iter][iter2]=calloc(8,sizeof(int*));
+	}
 
 	for(y=0;y<MAXY;y++) {
 		for(x=0;x<MAXX;x++) {
@@ -200,16 +202,17 @@ int main(int argc, char *argv[]) {
 	int *size = calloc(discover+1, sizeof(int));
 	countRegions(region, size);
 
-	countFences(map, fences);
+	countFences(map, fence);
 
-	printMap(map,region,fences);
-	for(int i=1; size[i]; i++) printf("Region %3d, size %d\n", i, size[i]);
+//	printMap(map,region, fence);
+//	for(int i=1; size[i]; i++) printf("Region %3d, size %d\n", i, size[i]);
 
-	printf("Total price %d\n", worth(size, region, fences));
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-//	for(i=0; array[i]; i++) {
-//		printf("%d\n", array[i]);
-//	}
+	printf("Total price  %d\n", worth(size, region, fence));
+
+	reduceFences(map, fence);
+//	printMap(map,region, fence);
+//	for(int i=1; size[i]; i++) printf("Region %3d  %d * %d = %d\n", i, size[i], sides(i, region, fence), sides(i, region, fence) * size[i]);
+	printf("Reduced price %d\n", worth(size, region, fence));
 
 	return 0;
 }
