@@ -68,6 +68,8 @@ TMachine *readInput() {
 			sscanf(line,"Prize: X=%lld, Y=%lld",
 				&(mach[count].prize.x),
 				&(mach[count].prize.y));
+				mach[count].prize.x+=10000000000000;
+				mach[count].prize.y+=10000000000000;
 			break;
 		}
 
@@ -103,17 +105,18 @@ int main(int argc, char *argv[]) {
 //	array = readInput();
 	array=readInput();
 
+/*
         for(i=0; array[i].prize.x; i++) {
                printf("Button A: X+%lld, Y+%lld\n", array[i].button[0].x, array[i].button[0].y);
               printf("Button B: X+%lld, Y+%lld\n", array[i].button[1].x, array[i].button[1].y);
               printf("Prize: X=%lld, Y=%lld\n\n", array[i].prize.x, array[i].prize.y);
 	}
-
+*/
 
 	long long sum=0;
 	#pragma omp parallel for shared(sum)
 	for(i=0; i<MAXY; i++) {
-		long long min=INT_MAX;
+		long long min=LLONG_MAX;
 		long long y1=-array[i].button[0].y;
 		for(long long x1=0; x1<=array[i].prize.x; x1+=array[i].button[0].x) {
 			y1+=array[i].button[0].y;
