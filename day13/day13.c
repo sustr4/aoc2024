@@ -5,14 +5,11 @@
 #include<malloc.h>
 #include<limits.h>
 #include<assert.h>
+#include<math.h>
 
 // Boundary and input file definitions, set as required
 #define INPUT "input.txt"
-#define MAXX 76
 #define MAXY 320
-//#define INPUT "unit1.txt"
-//#define MAXX 10
-//#define MAXY 10
 
 // Point structure definition
 typedef struct {
@@ -39,8 +36,6 @@ TMachine *readInput() {
 		fprintf(stderr,"Failed to open input file\n");
 		exit(1); }
 
-	// Allocate one-dimensional array of strings
-	// char **inst=(char**)calloc(MAXX, sizeof(char*));
 	TMachine *mach=(TMachine*)calloc(MAXY, sizeof(TMachine));
 	for(int iter=0; iter<MAXY; iter++) {
 		mach[iter].cost[0]=3;
@@ -72,28 +67,11 @@ TMachine *readInput() {
 				mach[count].prize.y+=10000000000000;
 			break;
 		}
-
-		//asprintf(&(inst[count]), "%s", line);	
-
-		// Read into array
-		// sscanf(line,"%lld,%lld",
-		//	&(inst[count].x),
-		//	&(inst[count].y));
-
-		// Read tokens from single line
-		//char *token;
-		//token = strtok(line, ",");
-		//while( 1 ) {
-		//	if(!(token = strtok(NULL, ","))) break;
-		//}
-
 	}
 
 	fclose(input);
 	if (line)
 	free(line);
-
-//	printMap(map);
 
 	return mach;
 }
@@ -102,39 +80,29 @@ int main(int argc, char *argv[]) {
 
 	TMachine *array;
 	int i=0;	
-//	array = readInput();
 	array=readInput();
-
 /*
         for(i=0; array[i].prize.x; i++) {
-               printf("Button A: X+%lld, Y+%lld\n", array[i].button[0].x, array[i].button[0].y);
-              printf("Button B: X+%lld, Y+%lld\n", array[i].button[1].x, array[i].button[1].y);
-              printf("Prize: X=%lld, Y=%lld\n\n", array[i].prize.x, array[i].prize.y);
-	}
-*/
+		printf("Button A: X+%lld, Y+%lld\n", array[i].button[0].x, array[i].button[0].y);
+		printf("Button B: X+%lld, Y+%lld\n", array[i].button[1].x, array[i].button[1].y);
+		printf("Prize: X=%lld, Y=%lld\n\n", array[i].prize.x, array[i].prize.y);
+	} */
 
 	long long sum=0;
 	#pragma omp parallel for shared(sum)
 	for(i=0; i<MAXY; i++) {
-		long long min=LLONG_MAX;
-		long long y1=-array[i].button[0].y;
-		for(long long x1=0; x1<=array[i].prize.x; x1+=array[i].button[0].x) {
-			y1+=array[i].button[0].y;
-//			printf("b=(%lld-%lld*%lld)/%lld\n",array[i].prize.x,a,array[i].button[0].x,array[i].button[1].x);
-//			long long b=(array[i].prize.x-a*array[i].button[0].x)/array[i].button[1].x;
-			long long b=(array[i].prize.x-x1)/array[i].button[1].x;
-			
-			if(x1+b*array[i].button[1].x!=array[i].prize.x) continue;
-			if(y1+b*array[i].button[1].y!=array[i].prize.y) continue;
 
-			long long a=x1/array[i].button[0].x;
-			long long cost= array[i].cost[0] * a;
-			cost+= array[i].cost[1] * b;
-			if(min>cost) min=cost;
-			printf("%i Hit %lld+%lld = %lld, min = %lld\n", i, a, b, cost, min );
-			
+		long long x1 = array[i].button[0].x; long long y1 = array[i].button[0].y;
+		long long x2 = array[i].button[1].x; long long y2 = array[i].button[1].y;
+		long long x3 = array[i].prize.x; long long y3 = array[i].prize.y;
+
+		long long b=(long long)round(((long double)y3-(long double)x3/(long double)x1*(long double)y1)/((long double)y2-(long double)x2*(long double)y1/(long double)x1));
+		long long a=(long long)round(((long double)x3-(long double)b*(long double)x2)/(long double)x1);
+		if((a*x1 + b*x2 == x3) && (a*y1 + b*y2 == y3)) {
+			long long cost=a*array[i].cost[0]+b*array[i].cost[1];
+			printf("%i Hit %lld*%lld + %lld*%lld = %lld\n", i, a, array[i].cost[0], b, array[i].cost[1], cost);
+			sum+=cost;
 		}
-		if(min<INT_MAX) sum+=min;
 	}
 
 	printf("Sum: %lld\n", sum);
