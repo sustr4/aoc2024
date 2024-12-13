@@ -16,8 +16,8 @@
 
 // Point structure definition
 typedef struct {
-	int x;
-	int y;
+	long x;
+	long y;
 } TPoint;
 
 typedef struct {
@@ -26,41 +26,6 @@ typedef struct {
 	TPoint prize;
 } TMachine;
 
-
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
-
-// Print a two-dimensional array
-void printMap (char **map) {
-	int x,y;
-	for(y=0; y<MAXY; y++) {
-		for(x=0; x<MAXX; x++) {
-			printf("%c", map[y][x]);
-		}
-		printf("\n");
-	}
-}
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
-
-// Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
-int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
-int dx[] = { -1,  0,  1, 1, 1, 0, -1, -1};
-char mapnb(char **map, int y, int x, int n) {
-	assert((n>=0) && (n<8));
-	if((y+dy[n]<0) || (y+dy[n]>=MAXY) ||
-	   (x+dx[n]<0) || (x+dx[n]>=MAXX)) return 0;
-	return(map[y+dy[n]][x+dx[n]]);
-}
 
 // Read input file line by line (e.g., into an array)
 TMachine *readInput() {
@@ -90,34 +55,24 @@ TMachine *readInput() {
 			count++;
 			continue; }
 
+		int b=1;
 		switch(line[7]) {
 		case 'A':
+			b=0;
 		case 'B':
-			char b;
-			sscanf(line,"Button %c: X+%d, Y+%d", &b,
-				&(mach[count].button[b-'A'].x),
-				&(mach[count].button[b-'A'].y));
+			char var;
+			sscanf(line,"Button %c: X+%ld, Y+%ld", &var,
+				&(mach[count].button[b].x),
+				&(mach[count].button[b].y));
 			break;
 		case 'X':
-			sscanf(line,"Prize: X=%d, Y=%d",
+			sscanf(line,"Prize: X=%ld, Y=%ld",
 				&(mach[count].prize.x),
 				&(mach[count].prize.y));
+			mach[count].prize.x+=10000000000000;
+			mach[count].prize.y+=10000000000000;
 			break;
 		}
-
-		//asprintf(&(inst[count]), "%s", line);	
-
-		// Read into array
-		// sscanf(line,"%d,%d",
-		//	&(inst[count].x),
-		//	&(inst[count].y));
-
-		// Read tokens from single line
-		//char *token;
-		//token = strtok(line, ",");
-		//while( 1 ) {
-		//	if(!(token = strtok(NULL, ","))) break;
-		//}
 
 	}
 
@@ -137,14 +92,33 @@ int main(int argc, char *argv[]) {
 //	array = readInput();
 	array=readInput();
 
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-	for(i=0; array[i].prize.x; i++) {
-		printf("Button A: X+%d, Y+%d\n", array[i].button[0].x, array[i].button[0].y);
-		printf("Button B: X+%d, Y+%d\n", array[i].button[1].x, array[i].button[1].y);
-		printf("Prize: X=%d, Y=%d\n\n", array[i].prize.x, array[i].prize.y);
-
-
+        for(i=0; array[i].prize.x; i++) {
+               printf("Button A: X+%ld, Y+%ld\n", array[i].button[0].x, array[i].button[0].y);
+              printf("Button B: X+%ld, Y+%ld\n", array[i].button[1].x, array[i].button[1].y);
+              printf("Prize: X=%ld, Y=%ld\n\n", array[i].prize.x, array[i].prize.y);
 	}
+
+
+	long long sum=0;
+	#pragma omp parallel for shared(sum)
+	for(i=0; i<MAXY; i++) {
+		long long min=LLONG_MAX;
+		for(long a=0; a<array[i].prize.x/array[i].button[0].x; a++) {
+//			printf("b=(%d-%d*%d)/%d\n",array[i].prize.x,a,array[i].button[0].x,array[i].button[1].x);
+			long b=(array[i].prize.x-a*array[i].button[0].x)/array[i].button[1].x;
+			
+			if((a*array[i].button[0].x+b*array[i].button[1].x==array[i].prize.x) &&
+			   (a*array[i].button[0].y+b*array[i].button[1].y==array[i].prize.y)) {
+				long cost= array[i].cost[0] * a;
+				cost+= array[i].cost[1] * b;
+				if(min>cost) min=cost;
+				printf("%d Hit %ld+%ld = %ld, min = %lld\n", i, a, b, cost, min );
+			}
+		}
+		if(min<INT_MAX) sum+=min;
+	}
+
+	printf("Sum: %lld\n", sum);
 
 	return 0;
 }
