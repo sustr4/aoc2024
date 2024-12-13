@@ -114,17 +114,22 @@ int main(int argc, char *argv[]) {
 	#pragma omp parallel for shared(sum)
 	for(i=0; i<MAXY; i++) {
 		long long min=INT_MAX;
-		for(long long a=0; a<100; a++) {
+		long long y1=-array[i].button[0].y;
+		for(long long x1=0; x1<=array[i].prize.x; x1+=array[i].button[0].x) {
+			y1+=array[i].button[0].y;
 //			printf("b=(%lld-%lld*%lld)/%lld\n",array[i].prize.x,a,array[i].button[0].x,array[i].button[1].x);
-			long long b=(array[i].prize.x-a*array[i].button[0].x)/array[i].button[1].x;
+//			long long b=(array[i].prize.x-a*array[i].button[0].x)/array[i].button[1].x;
+			long long b=(array[i].prize.x-x1)/array[i].button[1].x;
 			
-			if((a*array[i].button[0].x+b*array[i].button[1].x==array[i].prize.x) &&
-			   (a*array[i].button[0].y+b*array[i].button[1].y==array[i].prize.y)) {
-				long long cost= array[i].cost[0] * a;
-				cost+= array[i].cost[1] * b;
-				if(min>cost) min=cost;
-				printf("%i Hit %lld+%lld = %lld, min = %lld\n", i, a, b, cost, min );
-			}
+			if(x1+b*array[i].button[1].x!=array[i].prize.x) continue;
+			if(y1+b*array[i].button[1].y!=array[i].prize.y) continue;
+
+			long long a=x1/array[i].button[0].x;
+			long long cost= array[i].cost[0] * a;
+			cost+= array[i].cost[1] * b;
+			if(min>cost) min=cost;
+			printf("%i Hit %lld+%lld = %lld, min = %lld\n", i, a, b, cost, min );
+			
 		}
 		if(min<INT_MAX) sum+=min;
 	}
