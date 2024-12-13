@@ -9,23 +9,22 @@
 // Boundary and input file definitions, set as required
 #define INPUT "input.txt"
 #define MAXX 76
-#define MAXY 321
+#define MAXY 320
 //#define INPUT "unit1.txt"
 //#define MAXX 10
 //#define MAXY 10
 
 // Point structure definition
 typedef struct {
-	long x;
-	long y;
+	long long x;
+	long long y;
 } TPoint;
 
 typedef struct {
 	TPoint button[2];
-	int cost[2];
+	long long cost[2];
 	TPoint prize;
 } TMachine;
-
 
 // Read input file line by line (e.g., into an array)
 TMachine *readInput() {
@@ -61,18 +60,30 @@ TMachine *readInput() {
 			b=0;
 		case 'B':
 			char var;
-			sscanf(line,"Button %c: X+%ld, Y+%ld", &var,
+			sscanf(line,"Button %c: X+%lld, Y+%lld", &var,
 				&(mach[count].button[b].x),
 				&(mach[count].button[b].y));
 			break;
 		case 'X':
-			sscanf(line,"Prize: X=%ld, Y=%ld",
+			sscanf(line,"Prize: X=%lld, Y=%lld",
 				&(mach[count].prize.x),
 				&(mach[count].prize.y));
-			mach[count].prize.x+=10000000000000;
-			mach[count].prize.y+=10000000000000;
 			break;
 		}
+
+		//asprintf(&(inst[count]), "%s", line);	
+
+		// Read into array
+		// sscanf(line,"%lld,%lld",
+		//	&(inst[count].x),
+		//	&(inst[count].y));
+
+		// Read tokens from single line
+		//char *token;
+		//token = strtok(line, ",");
+		//while( 1 ) {
+		//	if(!(token = strtok(NULL, ","))) break;
+		//}
 
 	}
 
@@ -93,26 +104,26 @@ int main(int argc, char *argv[]) {
 	array=readInput();
 
         for(i=0; array[i].prize.x; i++) {
-               printf("Button A: X+%ld, Y+%ld\n", array[i].button[0].x, array[i].button[0].y);
-              printf("Button B: X+%ld, Y+%ld\n", array[i].button[1].x, array[i].button[1].y);
-              printf("Prize: X=%ld, Y=%ld\n\n", array[i].prize.x, array[i].prize.y);
+               printf("Button A: X+%lld, Y+%lld\n", array[i].button[0].x, array[i].button[0].y);
+              printf("Button B: X+%lld, Y+%lld\n", array[i].button[1].x, array[i].button[1].y);
+              printf("Prize: X=%lld, Y=%lld\n\n", array[i].prize.x, array[i].prize.y);
 	}
 
 
 	long long sum=0;
 	#pragma omp parallel for shared(sum)
 	for(i=0; i<MAXY; i++) {
-		long long min=LLONG_MAX;
-		for(long a=0; a<array[i].prize.x/array[i].button[0].x; a++) {
-//			printf("b=(%d-%d*%d)/%d\n",array[i].prize.x,a,array[i].button[0].x,array[i].button[1].x);
-			long b=(array[i].prize.x-a*array[i].button[0].x)/array[i].button[1].x;
+		long long min=INT_MAX;
+		for(long long a=0; a<100; a++) {
+//			printf("b=(%lld-%lld*%lld)/%lld\n",array[i].prize.x,a,array[i].button[0].x,array[i].button[1].x);
+			long long b=(array[i].prize.x-a*array[i].button[0].x)/array[i].button[1].x;
 			
 			if((a*array[i].button[0].x+b*array[i].button[1].x==array[i].prize.x) &&
 			   (a*array[i].button[0].y+b*array[i].button[1].y==array[i].prize.y)) {
-				long cost= array[i].cost[0] * a;
+				long long cost= array[i].cost[0] * a;
 				cost+= array[i].cost[1] * b;
 				if(min>cost) min=cost;
-				printf("%d Hit %ld+%ld = %ld, min = %lld\n", i, a, b, cost, min );
+				printf("%i Hit %lld+%lld = %lld, min = %lld\n", i, a, b, cost, min );
 			}
 		}
 		if(min<INT_MAX) sum+=min;
