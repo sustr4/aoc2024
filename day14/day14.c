@@ -21,13 +21,31 @@ typedef struct {
 } TRobot;
 
 // Print a two-dimensional array
-void printMap (TRobot *robot) {
+int countMap (TRobot *robot) {
+	int sum=0;
+	int x,y,r;
+	for(y=0; y<MAXY; y++) {
+		for(x=0; x<MAXX; x++) {
+			for(r=0;r<MAXR;r++) {
+				if((y==robot[r].y)&&(x==robot[r].x)) {
+					sum++;
+					break;
+				}
+			}
+		}
+	}
+	return sum;
+}
+// Print a two-dimensional array
+int printMap (TRobot *robot) {
+	int sum=0;
 	int x,y,r;
 	for(y=0; y<MAXY; y++) {
 		for(x=0; x<MAXX; x++) {
 			int dr=0;
 			for(r=0;r<MAXR;r++) {
 				if((y==robot[r].y)&&(x==robot[r].x)) {
+					sum++;
 					dr=1;
 					break;
 				}
@@ -37,6 +55,7 @@ void printMap (TRobot *robot) {
 		}
 		printf("\n");
 	}
+	return sum;
 }
 
 // Read input file line by line (e.g., into an array)
@@ -82,7 +101,9 @@ int main(int argc, char *argv[]) {
 	robot = readInput();
 
 	int sec=0;
-	for(sec=0; sec<7569; sec++) {
+	int r=0;
+	int fut=0;
+	for(sec=0; fut<1; sec++) {
 		for(i=0; i<MAXR; i++) {
 			robot[i].x=(robot[i].x+robot[i].dx);
 			while(robot[i].x>=MAXX) robot[i].x-=MAXX;
@@ -91,9 +112,13 @@ int main(int argc, char *argv[]) {
 			while(robot[i].y>=MAXY) robot[i].y-=MAXY;
 			while(robot[i].y<0) robot[i].y+=MAXY;
 		}
+		r=countMap(robot);
+		if(r==500) {
+			printMap(robot);
+			printf("Robots: %d, Seconds: %d\n", r, sec+1);
+			fut++;
+		}
 	}
-	printMap(robot);
-	printf("Seconds: %d\n", sec);
 
 	return 0;
 }
