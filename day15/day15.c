@@ -8,12 +8,10 @@
 
 // Boundary and input file definitions, set as required
 #define INPUT "input.txt"
-#define MAXX 50
+//#define INPUT "unit1.txt"
+#define MAXX 100
 #define MAXY 50
 #define MAXM 20000
-//#define INPUT "unit1.txt"
-//#define MAXX 10
-//#define MAXY 10
 
 // Point structure definition
 typedef struct {
@@ -29,26 +27,26 @@ int comp(const void *a, const void *b)
 	return (*da > *db) - (*da < *db);
 }
 
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
 
 // Print a two-dimensional array
-void printMap (char **map, TPoint rob) {
+void printMap (char **map, TPoint rob, char **needsMove) {
 	int x,y;
 	long long sum=0;
 	for(y=0; y<MAXY; y++) {
 		for(x=0; x<MAXX; x++) {
-			if((y==rob.y)&&(x==rob.x)) printf("\033[1;31m@\033[0m");
-			else printf("%c", map[y][x]);
-			if(map[y][x]=='O') sum+=y*100+x;
+			if((y==rob.y)&&(x==rob.x)) {
+				printf("\033[1;31m@\033[0m");
+				continue;
+			}
+			if(needsMove && needsMove[y][x]) printf("\033[1;34m");
+			printf("%c", map[y][x]);
+			if(map[y][x]=='[') sum+=y*100+x;
+			if(needsMove && needsMove[y][x]) printf("\033[0m");
 		}
 		printf("\n");
 	}
 	printf("GPS sum: %lld\n", sum);
 }
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
 
 // Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
 int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
@@ -79,6 +77,7 @@ char **readInput(char *mov) {
 	for(int iter=0; iter<MAXY; iter++) map[iter]=calloc(MAXX,sizeof(char));
 	trans=calloc(256, sizeof(char));
 	trans['<']=7; trans['>']=3; trans['^']=1; trans['v']=5;
+	trans['>']=3; trans['<']=7;
 
 	while ((read = getline(&line, &len, input)) != -1) {
 		line[strlen(line)-1] = 0; // Truncate the NL
@@ -86,7 +85,15 @@ char **readInput(char *mov) {
 		if(strlen(line)<1) continue;
 
 		if(line[0]=='#') { // Read into map
-			for(x=0; x<MAXX; x++) map[y][x] = line[x];
+			for(x=0; x<MAXX; x++) {
+				map[y][x*2] = line[x];
+				map[y][x*2+1] = line[x];
+				if(line[x]=='O') {
+					map[y][x*2] = '[';
+					map[y][x*2+1] = ']';
+				}
+				if(line[x]=='@') map[y][x*2+1] = '.';
+			}
 			y++;
 			continue;
 		}
@@ -101,41 +108,75 @@ char **readInput(char *mov) {
 	return map;
 }
 
+int findNeed(char **map, int y, int x, int mov, char **needsMove) {
+	if((map[y][x]!='[')&&(map[y][x]!=']')) return 0;
+	if(needsMove[y][x]) return 0;
 
-TPoint move(char **map, TPoint rob, int mov) {
-	int y, x;
+	needsMove[y][x]=map[y][x];
+	printf("[%d,%d] needs move\n", y, x);
+	findNeed(map,y+dy[mov],x+dx[mov],mov,needsMove);
 
-	//try move
-	y=rob.y, x=rob.x;
-	int isFree=0;
-	while(map[y][x]!='#') {
-		y+=dy[mov];
-		x+=dx[mov];
-		if(map[y][x]=='.') {
-			isFree=1;
-			break; } }
-	if(!isFree) return rob;
-	printf("Path towards %d is free\n", mov);
+	if(map[y][x]==']') findNeed(map, y, x+dx[mov]-1, mov, needsMove);
+	if(map[y][x]=='[') findNeed(map, y, x+dx[mov]+1, mov, needsMove);
 
-	y=rob.y+dy[mov], x=rob.x+dx[mov];
-	int crates=0;
-	while(map[y][x]!='.') {
-		y+=dy[mov];
-		x+=dx[mov]; 
-		crates++;}
-	printf("%d crates in the way\n", crates);
+	return 0;
+}
 
-	while(crates) {
-		map[y][x]=map[y-dy[mov]][x-dx[mov]];
-		y-=dy[mov];
-		x-=dx[mov]; 
-		map[y][x]='.';
-		crates--;
+int isBlocked(char **map, int mov, char **needsMove) {
+	for(int y=0; y<MAXY; y++) {
+		for(int x=0; x<MAXX; x++) {
+			if(needsMove[y][x]&&(mapnb(map,y,x,mov)=='#')) {
+				printf("Blocked by wall at [%d,%d]\n", y, x);
+				return 1;
+			}
+		}
 	}
 
+	return 0;
+}
+
+int shift(char **map, int mov, char **needsMove) {
+	for(int y=0; y<MAXY; y++)
+		for(int x=0; x<MAXX; x++)
+			if(needsMove[y][x]) map[y][x]='.';
+	for(int y=0; y<MAXY; y++) {
+		for(int x=0; x<MAXX; x++) {
+			if(needsMove[y][x]) {
+				printf("moving [%d,%d] (%c) to [%d,%d]\n", y, x, needsMove[y][x],
+					y+dy[mov], x+dx[mov]);
+				map[y+dy[mov]][x+dx[mov]]=needsMove[y][x];
+			}
+		}
+	}
+	return 0;
+}
+
+TPoint move(char **map, TPoint rob, int mov) {
 	TPoint ret=rob;
-	ret.x+=dx[mov];
+	char **needsMove=NULL;
+	//try move
+	assert((mov==1)||(mov==3)||(mov==5)||(mov==7));
+	if(mapnb(map,rob.y,rob.x,mov)=='#') goto cleanup; // Don't hit wall
+
+	needsMove=calloc(MAXY,sizeof(char*));
+	for(int i=0;i<MAXY;i++) needsMove[i]=calloc(MAXX,sizeof(char));
+
+	findNeed(map, rob.y+dy[mov], rob.x+dx[mov], mov, needsMove);
+
+	if(isBlocked(map, mov, needsMove)) goto cleanup;
+	printf("Path towards %d is free\n", mov);
+//	printMap(map, rob, needsMove);
+
+	shift(map, mov, needsMove);
+
 	ret.y+=dy[mov];
+	ret.x+=dx[mov];
+cleanup:
+	for(int i=0;i<MAXY;i++) if(needsMove) free(needsMove[i]);
+	if(needsMove) free(needsMove);
+
+	printf("Afterwards the robot is at [%d,%d]\n", ret.y, ret.x);
+	
 	return ret;
 }
 
@@ -152,13 +193,16 @@ int main(int argc, char *argv[]) {
 
 foundrob:
 	map[rob.y][rob.x]='.';		
+	printf("Robot starts at [%d,%d]\n", rob.y, rob.x);
 			
-
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
+	trans['>']=3; trans['<']=7;
 	for(i=0; i<MAXM; i++) {
 		rob=move(map, rob, trans[(int)mov[i]]);
 	}
-	printMap(map, rob);
+//	printMap(map, rob);
+//	printf("Directions test: %d %d %d %d\n", trans['^'], trans['>'], trans['v'], trans['<']);
+
+	printMap(map, rob, NULL);
 
 	return 0;
 }
