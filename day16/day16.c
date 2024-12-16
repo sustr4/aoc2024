@@ -11,8 +11,8 @@
 #define MAXX 141
 #define MAXY 141
 //#define INPUT "unit1.txt"
-//#define MAXX 10
-//#define MAXY 10
+//#define MAXX 17
+//#define MAXY 17
 
 // Point structure definition
 typedef struct {
@@ -20,30 +20,17 @@ typedef struct {
 	int y;
 } TPoint;
 
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
-
 // Print a two-dimensional array
-void printMap (char **map) {
+void printMap (char **map, int **visited) {
 	int x,y;
 	for(y=0; y<MAXY; y++) {
 		for(x=0; x<MAXX; x++) {
-			printf("%c", map[y][x]);
+			if(visited[y][x]) printf("%d",visited[y][x]%10);
+			else printf("%c", map[y][x]);
 		}
 		printf("\n");
 	}
 }
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
 
 // Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
 int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
@@ -84,13 +71,12 @@ char **readInput() {
 	if (line)
 	free(line);
 
-	printMap(map);
 	return map;
 }
 
 int step(char **map, int ***cost, int y, int x, int n, int sum, TPoint E) {
 
-	if(cost[y][x][n]&&(sum >= cost[y][x][n])) return 0; // Been here for better price before
+	if(cost[y][x][n]&&(sum > cost[y][x][n])) return 0; // Been here for better price before
 	else cost[y][x][n]=sum;
 
 	if((y==E.y)&&(x==E.x)) return 1; // Reached the goal
@@ -106,20 +92,58 @@ int step(char **map, int ***cost, int y, int x, int n, int sum, TPoint E) {
 	if(map[y+dy[nn]][x+dx[nn]]!='#')
 		step(map, cost, y+dy[nn], x+dx[nn], nn, sum+1001, E);
 
-	return 0;
+	return 1;
+}
+
+int hop(char **map, int ***cost, int **visited, TPoint *stack, int y, int x, int n, int sum, TPoint E, int depth, int max) {
+	static int **revisit=NULL;
+
+	if(!revisit) {
+		revisit=calloc(MAXY,sizeof(int*));
+		for(int i=0; i<MAXY; i++) revisit[i]=calloc(MAXX,sizeof(int));
+	}
+
+	if(revisit[y][x]) return 0;
+
+	if(cost[y][x][n]&&(sum > cost[y][x][n])) return 0; // Been here for better price before
+	if(sum>max) return 0; //
+	stack[depth].x=x;
+	stack[depth].y=y;
+
+	revisit[y][x]=1;
+
+	if((y==E.y)&&(x==E.x)) {
+		visited[y][x]=1;
+		for(int i=0; i<depth; i++) visited[stack[i].y][stack[i].x]++;
+	}
+
+	if(map[y+dy[n]][x+dx[n]]!='#') // Forward
+		hop(map, cost, visited, stack, y+dy[n], x+dx[n], n, sum+1, E, depth+1, max);
+
+	int nn=n-2; if(nn<0) nn+=8; // Turn left
+	if(map[y+dy[nn]][x+dx[nn]]!='#')
+		hop(map, cost, visited, stack, y+dy[nn], x+dx[nn], nn, sum+1001, E, depth+1, max);
+	
+	nn=n+2; if(nn>=8) nn-=8; // Turn right
+	if(map[y+dy[nn]][x+dx[nn]]!='#')
+		hop(map, cost, visited, stack, y+dy[nn], x+dx[nn], nn, sum+1001, E, depth+1, max);
+
+	revisit[y][x]=0;
+
+	return 1;
 }
 
 int main(int argc, char *argv[]) {
 
-//	TPoint *array;
-//	int i=0;	
-//	array = readInput();
 	char **map=readInput();
 	int ***cost=calloc(MAXY,sizeof(int**));
 	for(int i=0; i<MAXY; i++) {
 		cost[i]=calloc(MAXX,sizeof(int*));
 		for(int j=0;j<MAXX;j++) cost[i][j]=calloc(8,sizeof(int));
 	}
+	int **visited=calloc(MAXY,sizeof(int*));
+	for(int i=0; i<MAXY; i++) visited[i]=calloc(MAXX,sizeof(int));
+	TPoint *stack=calloc(19881,sizeof(TPoint));
 
 	TPoint S,E; S.x=0; S.y=0; E.x=0; E.y=0;
 
@@ -131,12 +155,18 @@ int main(int argc, char *argv[]) {
 	
 	step(map, cost, S.y, S.x, 3, 0, E);
 
-	for(int i=0;i<8;i++) printf("%d: %d\n", i, cost[E.y][E.x][i]);	
-
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-//	for(i=0; array[i]; i++) {
-//		printf("%d\n", array[i]);
-//	}
+	int min=INT_MAX;
+	for(int i=0;i<8;i++) {
+		if((cost[E.y][E.x][i]>0)&&(cost[E.y][E.x][i]<min)) min=cost[E.y][E.x][i];
+	}
+	printf("Minimum cost: %d\n",min);
+	
+	hop(map, cost, visited, stack, S.y, S.x, 3, 0, E, 0, min);
+	int cnt=0;
+	for(int y=0; y<MAXY; y++)
+		for(int x=0; x<MAXX; x++)
+			if(visited[y][x]) cnt++;
+	printf("Count: %d\n", cnt);
 
 	return 0;
 }
