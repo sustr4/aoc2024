@@ -11,27 +11,8 @@
 #define MAXX 76
 #define INPUT "unit1.txt"
 
-// Point structure definition
-typedef struct {
-	int x;
-	int y;
-	int z;
-} TPoint;
-
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
-
 // Read input file line by line (e.g., into an array)
-int *readInput(int *reg) {
+long *readInput(long *reg) {
 	FILE * input;
 	char * line = NULL;
 	size_t len = 0;
@@ -43,7 +24,7 @@ int *readInput(int *reg) {
 		fprintf(stderr,"Failed to open input file\n");
 		exit(1); }
 
-	int *inst=(int*)calloc(MAXX, sizeof(int));
+	long *inst=(long*)calloc(MAXX, sizeof(long));
 
 	while ((read = getline(&line, &len, input)) != -1) {
 		line[strlen(line)-1] = 0; // Truncate the NL
@@ -51,8 +32,8 @@ int *readInput(int *reg) {
 		if(strlen(line)<1) continue;
 		if(line[0]=='R') {
 			char rg;
-			int val;
-			sscanf(line,"Register %c: %d",
+			long val;
+			sscanf(line,"Register %c: %ld",
 				&rg,
 				&val);
 			reg[rg-'A']=val;
@@ -79,9 +60,9 @@ int *readInput(int *reg) {
 	return inst;
 }
 
-int ipow(int base, int exp) // Exponentiation by squaring. TODO: add to useful
+long ipow(long base, long exp) // Exponentiation by squaring. TODO: add to useful
 {
-	int result = 1;
+	long result = 1;
 	for (;;) {
 		if (exp & 1) result *= base;
 		exp >>= 1;
@@ -91,9 +72,9 @@ int ipow(int base, int exp) // Exponentiation by squaring. TODO: add to useful
 	return result;
 }
 
-int run(int *prog, int idx, int *reg, int *outseq) {
+long run(long *prog, long idx, long *reg, long *outseq) {
 
-	int prefetch=0;
+	long prefetch=0;
 	if(prog[idx+1]<4) prefetch=prog[idx+1];
 	else if(prog[idx+1]<7) prefetch=reg[prog[idx+1]-4];
 
@@ -146,19 +127,19 @@ int run(int *prog, int idx, int *reg, int *outseq) {
 int main(int argc, char *argv[]) {
 
 //	TPoint *array;
-	int i=0;	
+	long i=0;	
 //	array = readInput();
-	int *reg=(int*)calloc(3, sizeof(int));
-	int *prog=readInput(reg);
-	int len;
-	int unknown;
+	long *reg=(long*)calloc(3, sizeof(long));
+	long *prog=readInput(reg);
+	long len;
+	long unknown;
 	for(len=0; prog[len]>=0; len++)
-		printf("%d,",prog[len]);
+		printf("%ld,",prog[len]);
 	printf("\n");
 
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
 	for(unknown=0; unknown<INT_MAX; unknown++) {
-		int outseq=0;
+		long outseq=0;
 		reg[0]=unknown; reg[1]=0; reg[2]=0;
 		i=0;
 		while(1) {
@@ -169,7 +150,7 @@ int main(int argc, char *argv[]) {
 			if(outseq>len) break;
 		}
 		if(outseq==len) {
-			printf("%d matches\n", unknown);
+			printf("%ld matches\n", unknown);
 			break;
 		}
 	}
