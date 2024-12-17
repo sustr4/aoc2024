@@ -7,10 +7,9 @@
 #include<assert.h>
 
 // Boundary and input file definitions, set as required
-#define INPUT "input.txt"
+//#define INPUT "input.txt"
 #define MAXX 76
-//#define INPUT "unit1.txt"
-//#define MAXX 10
+#define INPUT "unit1.txt"
 
 // Point structure definition
 typedef struct {
@@ -92,8 +91,7 @@ int ipow(int base, int exp) // Exponentiation by squaring. TODO: add to useful
 	return result;
 }
 
-
-int run(int *prog, int idx, int *reg) {
+int run(int *prog, int idx, int *reg, int *outseq) {
 
 	int prefetch=0;
 	if(prog[idx+1]<4) prefetch=prog[idx+1];
@@ -129,7 +127,8 @@ int run(int *prog, int idx, int *reg) {
 		break;
 // The out instruction (opcode 5) calculates the value of its combo operand modulo 8, then outputs that value. (If a program outputs multiple values, they are separated by commas.)
 	case 5:
-		printf("%d,",prefetch%8);
+//		printf("%d: %d,\n", (*outseq)++, prefetch%8);
+		if((prefetch%8)!=(prog[(*outseq)++])) return(-1);
 		break;
 // The bdv instruction (opcode 6) works exactly like the adv instruction except that the result is stored in the B register. (The numerator is still read from the A register.)
 	case 6:
@@ -152,15 +151,27 @@ int main(int argc, char *argv[]) {
 	int *reg=(int*)calloc(3, sizeof(int));
 	int *prog=readInput(reg);
 	int len;
-	for(len=0; prog[len]>=0; len++);
+	int unknown;
+	for(len=0; prog[len]>=0; len++)
+		printf("%d,",prog[len]);
+	printf("\n");
 
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-	while(1) {
-//		printf("%2i: %10d%10d%10d\n", i, reg[0], reg[1], reg[2]);
-		i=run(prog,i,reg);
-		if(i<0) break;
-		if(i>=len) break;
+	for(unknown=0; unknown<INT_MAX; unknown++) {
+		int outseq=0;
+		reg[0]=unknown; reg[1]=0; reg[2]=0;
+		i=0;
+		while(1) {
+	//		printf("%2i: %10d%10d%10d\n", i, reg[0], reg[1], reg[2]);
+			i=run(prog,i,reg,&outseq);
+			if(i<0) break;
+			if(i>=len) break;
+			if(outseq>len) break;
+		}
+		if(outseq==len) {
+			printf("%d matches\n", unknown);
+			break;
+		}
 	}
-	printf("\n");
 	return 0;
 }
