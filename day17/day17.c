@@ -7,12 +7,12 @@
 #include<assert.h>
 
 // Boundary and input file definitions, set as required
-//#define INPUT "input.txt"
+#define INPUT "input.txt"
 #define MAXX 76
-#define INPUT "unit1.txt"
+//#define INPUT "unit1.txt"
 
 // Read input file line by line (e.g., into an array)
-long *readInput(long *reg) {
+long long *readInput(long long *reg) {
 	FILE * input;
 	char * line = NULL;
 	size_t len = 0;
@@ -20,11 +20,12 @@ long *readInput(long *reg) {
 	int count = 0;
 
 	input = fopen(INPUT, "r");
+
 	if (input == NULL) {
 		fprintf(stderr,"Failed to open input file\n");
 		exit(1); }
 
-	long *inst=(long*)calloc(MAXX, sizeof(long));
+	long long *inst=(long long*)calloc(MAXX, sizeof(long long));
 
 	while ((read = getline(&line, &len, input)) != -1) {
 		line[strlen(line)-1] = 0; // Truncate the NL
@@ -32,8 +33,8 @@ long *readInput(long *reg) {
 		if(strlen(line)<1) continue;
 		if(line[0]=='R') {
 			char rg;
-			long val;
-			sscanf(line,"Register %c: %ld",
+			long long val;
+			sscanf(line,"Register %c: %lld",
 				&rg,
 				&val);
 			reg[rg-'A']=val;
@@ -60,9 +61,9 @@ long *readInput(long *reg) {
 	return inst;
 }
 
-long ipow(long base, long exp) // Exponentiation by squaring. TODO: add to useful
+long long ipow(long long base, long long exp) // Exponentiation by squaring. TODO: add to useful
 {
-	long result = 1;
+	long long result = 1;
 	for (;;) {
 		if (exp & 1) result *= base;
 		exp >>= 1;
@@ -72,9 +73,9 @@ long ipow(long base, long exp) // Exponentiation by squaring. TODO: add to usefu
 	return result;
 }
 
-long run(long *prog, long idx, long *reg, long *outseq) {
+long long run(long long *prog, long long idx, long long *reg, long long *outseq) {
 
-	long prefetch=0;
+	long long prefetch=0;
 	if(prog[idx+1]<4) prefetch=prog[idx+1];
 	else if(prog[idx+1]<7) prefetch=reg[prog[idx+1]-4];
 
@@ -127,19 +128,23 @@ long run(long *prog, long idx, long *reg, long *outseq) {
 int main(int argc, char *argv[]) {
 
 //	TPoint *array;
-	long i=0;	
+	long long i=0;	
 //	array = readInput();
-	long *reg=(long*)calloc(3, sizeof(long));
-	long *prog=readInput(reg);
-	long len;
-	long unknown;
+	long long *reg=(long long*)calloc(3, sizeof(long long));
+	long long *prog=readInput(reg);
+	long long len;
+	long long unknown;
 	for(len=0; prog[len]>=0; len++)
-		printf("%ld,",prog[len]);
+		printf("%lld,",prog[len]);
 	printf("\n");
 
+	int found=0;
+
+//	printf("%ld\n%ld\n%lld\n", LONG_MAX, 130606920348432, LLONG_MAX);
+
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-	for(unknown=0; unknown<INT_MAX; unknown++) {
-		long outseq=0;
+	for(unknown=236539226447469; unknown<LONG_MAX; unknown+=1) {
+		long long outseq=0;
 		reg[0]=unknown; reg[1]=0; reg[2]=0;
 		i=0;
 		while(1) {
@@ -150,8 +155,9 @@ int main(int argc, char *argv[]) {
 			if(outseq>len) break;
 		}
 		if(outseq==len) {
-			printf("%ld matches\n", unknown);
-			break;
+			printf("%lld\n", unknown);
+			found++;
+			if(found) break;
 		}
 	}
 	return 0;
