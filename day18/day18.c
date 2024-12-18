@@ -17,24 +17,11 @@
 //#define MAXY 7
 //#define TASK1 12
 
-// Point structure definition
 typedef struct {
 	int x;
 	int y;
 	int z;
 } TByte;
-
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
 
 // Print a two-dimensional array
 void printMap (char **map, int **dist) {
@@ -83,7 +70,6 @@ TByte *readInput(char **map) {
 		sscanf(line,"%d,%d",
 			&(inst[count].x),
 			&(inst[count].y));
-		if(count<TASK1) map[inst[count].y][inst[count].x]='#';
 
 		count++;
 	}
@@ -107,36 +93,41 @@ int main(int argc, char *argv[]) {
 	for(y=0; y<MAXY; y++)
 		for(x=0; x<MAXX; x++) if(!map[y][x]) map[y][x]=' ';
 
-	int **dist=calloc(MAXY,sizeof(int*));
-	for(int iter=0; iter<MAXY; iter++) dist[iter]=calloc(MAXX,sizeof(int));
-	dist[0][0]=1;
+	for(int bit=0; bit<MAXB; bit++) {
 
-	int step=1;
-	while(1) {
-		int change=0;
-		for(y=0; y<MAXY; y++) {
-			for(x=0; x<MAXX; x++) {
-				if(dist[y][x]!=step) continue;
-				for(n=1; n<8; n+=2) {
-					if((mapnb(map, y, x, n)==' ') &&
-					  (dist[y+dy[n]][x+dx[n]])==0) {
-						printf("Stepping to [%d,%d] in step %d, direction %d\n", y+dy[n], x+dx[n], step+1, n);
-						dist[y+dy[n]][x+dx[n]]=step+1;
-						change++;
+		map[array[bit].y][array[bit].x]='#';
+		int **dist=calloc(MAXY,sizeof(int*));
+		for(int iter=0; iter<MAXY; iter++) dist[iter]=calloc(MAXX,sizeof(int));
+		dist[0][0]=1;
+		int step=1;
+		while(1) {
+			int change=0;
+			for(y=0; y<MAXY; y++) {
+				for(x=0; x<MAXX; x++) {
+					if(dist[y][x]!=step) continue;
+					for(n=1; n<8; n+=2) {
+						if((mapnb(map, y, x, n)==' ') &&
+						  (dist[y+dy[n]][x+dx[n]])==0) {
+//							printf("Stepping to [%d,%d] in step %d, direction %d\n", y+dy[n], x+dx[n], step+1, n);
+							dist[y+dy[n]][x+dx[n]]=step+1;
+							change++;
+						}
 					}
 				}
 			}
+			if(!change) break;
+//			printf("%d changes at step %d\n", change, step);
+			step++;
 		}
-		if(!change) break;
-		printf("%d changes at step %d\n", change, step);
-		step++;
+//		printMap(map,dist);
+		if(dist[MAXY-1][MAXX-1]) printf("%4d: Distance :%d\n", bit, dist[MAXY-1][MAXX-1]-1);
+		else {
+			printf("Blocked by %d,%d\n", array[bit].x, array[bit].y);
+			break;
+		}
+		for(int iter=0; iter<MAXY; iter++) if(dist[iter]) free(dist[iter]);
+		if(dist) free(dist);
 	}
-	printMap(map,dist);
-	printf("Distance :%d\n", dist[MAXY-1][MAXX-1]-1);
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-//	for(i=0; array[i]; i++) {
-//		printf("%d\n", array[i]);
-//	}
 
 	return 0;
 }
