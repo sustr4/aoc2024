@@ -108,7 +108,18 @@ char **readInput(char **req) {
 	return twl;
 }
 
-int check(char *string, char **twl, THash *hash) {
+int check(char *string, char **twl, THash *hash, int depth, int *history);
+
+int wrapcheck(char *string, char **twl, THash *hash, int depth, int *history) {
+	if(history[depth]>=0) return history[depth];
+	
+	int ret=check(string, twl, hash, depth, history);
+//	printf("Setting history[%d] to %d\n", depth, ret);
+	history[depth]=ret;
+	return(ret);
+}
+
+int check(char *string, char **twl, THash *hash, int depth, int *history) {
 	if(string[0]==0) return 1;
 
 	for(int i=hash[(int)string[0]].from; i<=hash[(int)string[0]].to; i++) {
@@ -118,12 +129,13 @@ int check(char *string, char **twl, THash *hash) {
 			continue; }
 	
 //		printf(" FIT\n");
-		
-		if(check(string+strlen(twl[i]), twl, hash)) return 1;
+
+		if(wrapcheck(string+strlen(twl[i]), twl, hash, depth+strlen(twl[i]), history)) return 1;
 	}
 	return 0;
 }
 THash *makehash(char **twl) {
+
 	THash *hash=calloc('z'+1,sizeof(THash));
 	for(int i=0; i<='z'; i++) hash[i].from=-1;
 
@@ -156,7 +168,10 @@ int main(int argc, char *argv[]) {
 //	#pragma omp parallel for shared(sum)
 	for(i=0; i<MAXY; i++) {
 		if(!req[i]) continue;
-		sum+=check(req[i], twl, hash);
+		int *history=malloc((strlen(req[i])+1) * sizeof(int));
+		for(int j=0; j<=strlen(req[i]); j++) history[j]=-1;
+		sum+=check(req[i], twl, hash, 0, history);
+		free(history);
 		printf("%3d %s\n", sum, req[i]);
 	}
 	printf("%d\n",sum);
