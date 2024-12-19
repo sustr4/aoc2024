@@ -31,30 +31,6 @@ int comp(const void *a, const void *b)
 // Example for calling qsort()
 //qsort(array,count,sizeof(),comp);
 
-
-// Print a two-dimensional array
-void printMap (char **map) {
-	int x,y;
-	for(y=0; y<MAXY; y++) {
-		for(x=0; x<MAXX; x++) {
-			printf("%c", map[y][x]);
-		}
-		printf("\n");
-	}
-}
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
-
-// Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
-int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
-int dx[] = { -1,  0,  1, 1, 1, 0, -1, -1};
-char mapnb(char **map, int y, int x, int n) {
-	assert((n>=0) && (n<8));
-	if((y+dy[n]<0) || (y+dy[n]>=MAXY) ||
-	   (x+dx[n]<0) || (x+dx[n]>=MAXX)) return 0;
-	return(map[y+dy[n]][x+dx[n]]);
-}
-
 // Read input file line by line (e.g., into an array)
 char **readInput(char **req) {
 	FILE * input;
@@ -108,20 +84,21 @@ char **readInput(char **req) {
 	return twl;
 }
 
-int check(char *string, char **twl, THash *hash, int depth, int *history);
+long long check(char *string, char **twl, THash *hash, int depth, long long *history);
 
-int wrapcheck(char *string, char **twl, THash *hash, int depth, int *history) {
+long long wrapcheck(char *string, char **twl, THash *hash, int depth, long long *history) {
 	if(history[depth]>=0) return history[depth];
 	
-	int ret=check(string, twl, hash, depth, history);
-//	printf("Setting history[%d] to %d\n", depth, ret);
+	long long ret=check(string, twl, hash, depth, history);
 	history[depth]=ret;
 	return(ret);
 }
 
-int check(char *string, char **twl, THash *hash, int depth, int *history) {
+long long check(char *string, char **twl, THash *hash, int depth, long long *history) {
+	long long ret=0;
 	if(string[0]==0) return 1;
 
+	if(hash[(int)string[0]].from<0) return 0;
 	for(int i=hash[(int)string[0]].from; i<=hash[(int)string[0]].to; i++) {
 //		printf("Trying %s on %s (%ld char)", twl[i], string, strlen(twl[i]));
 		if(strncmp(string,twl[i],strlen(twl[i]))) {
@@ -130,9 +107,9 @@ int check(char *string, char **twl, THash *hash, int depth, int *history) {
 	
 //		printf(" FIT\n");
 
-		if(wrapcheck(string+strlen(twl[i]), twl, hash, depth+strlen(twl[i]), history)) return 1;
+		ret+=wrapcheck(string+strlen(twl[i]), twl, hash, depth+strlen(twl[i]), history);
 	}
-	return 0;
+	return ret;
 }
 THash *makehash(char **twl) {
 
@@ -148,9 +125,7 @@ THash *makehash(char **twl) {
 
 int main(int argc, char *argv[]) {
 
-//	TPoint *array;
 	int i=0, twlcount=0;;	
-//	array = readInput();
 	char **req=(char**)calloc(MAXY, sizeof(char*));
 	char **twl=readInput(req);
 	while(twl[twlcount]) twlcount++;
@@ -164,17 +139,17 @@ int main(int argc, char *argv[]) {
 
 //	for(i=0; twl[i]; i++) printf("%s\n", twl[i]);
 
-	int sum=0;
-//	#pragma omp parallel for shared(sum)
+	long long sum=0;
+	#pragma omp parallel for shared(sum)
 	for(i=0; i<MAXY; i++) {
 		if(!req[i]) continue;
-		int *history=malloc((strlen(req[i])+1) * sizeof(int));
+		long long *history=malloc((strlen(req[i])+1) * sizeof(long long));
 		for(int j=0; j<=strlen(req[i]); j++) history[j]=-1;
 		sum+=check(req[i], twl, hash, 0, history);
 		free(history);
-		printf("%3d %s\n", sum, req[i]);
+		printf("%lld %s\n", sum, req[i]);
 	}
-	printf("%d\n",sum);
+	printf("%lld\n",sum);
 
 
 	return 0;
