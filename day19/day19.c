@@ -16,17 +16,16 @@
 
 // Point structure definition
 typedef struct {
-	int x;
-	int y;
-	int z;
-} TPoint;
+	int from;
+	int to;
+} THash;
 
 // Comparator function example
 int comp(const void *a, const void *b)
 {
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
+	char *const *da = a;
+	char *const *db = b;
+	return strcmp(*da,*db);
 }
 
 // Example for calling qsort()
@@ -109,10 +108,10 @@ char **readInput(char **req) {
 	return twl;
 }
 
-int check(char *string, char **twl) {
+int check(char *string, char **twl, THash *hash) {
 	if(string[0]==0) return 1;
 
-	for(int i=0; twl[i]; i++) {
+	for(int i=hash[(int)string[0]].from; i<=hash[(int)string[0]].to; i++) {
 //		printf("Trying %s on %s (%ld char)", twl[i], string, strlen(twl[i]));
 		if(strncmp(string,twl[i],strlen(twl[i]))) {
 //			printf("\n");
@@ -120,18 +119,36 @@ int check(char *string, char **twl) {
 	
 //		printf(" FIT\n");
 		
-		if(check(string+strlen(twl[i]), twl)) return 1;
+		if(check(string+strlen(twl[i]), twl, hash)) return 1;
 	}
 	return 0;
+}
+THash *makehash(char **twl) {
+	THash *hash=calloc('z'+1,sizeof(THash));
+	for(int i=0; i<='z'; i++) hash[i].from=-1;
+
+	for(int i=0; twl[i]; i++) {
+		if(hash[(int)twl[i][0]].from<0) hash[(int)twl[i][0]].from=i;
+		hash[(int)twl[i][0]].to=i;
+	}
+	return hash;
 }
 
 int main(int argc, char *argv[]) {
 
 //	TPoint *array;
-	int i=0;	
+	int i=0, twlcount=0;;	
 //	array = readInput();
 	char **req=(char**)calloc(MAXY, sizeof(char*));
 	char **twl=readInput(req);
+	while(twl[twlcount]) twlcount++;
+
+	qsort(twl,twlcount,sizeof(char*),comp);
+	THash *hash=makehash(twl);
+
+	for(char c=0; c<='z'; c++)
+		if(hash[(int)c].from>=0) printf("%c: %d--%d\n", c,
+			hash[(int)c].from, hash[(int)c].to);
 
 //	for(i=0; twl[i]; i++) printf("%s\n", twl[i]);
 
@@ -139,7 +156,7 @@ int main(int argc, char *argv[]) {
 //	#pragma omp parallel for shared(sum)
 	for(i=0; i<MAXY; i++) {
 		if(!req[i]) continue;
-		sum+=check(req[i], twl);
+		sum+=check(req[i], twl, hash);
 		printf("%3d %s\n", sum, req[i]);
 	}
 	printf("%d\n",sum);
