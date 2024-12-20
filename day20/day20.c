@@ -10,42 +10,29 @@
 #define INPUT "input.txt"
 #define MAXX 141
 #define MAXY 141
+#define MINSAVE 100
 //#define INPUT "unit1.txt"
 //#define MAXX 15
 //#define MAXY 15
+//#define MINSAVE 50
 
 // Point structure definition
 typedef struct {
 	int x;
 	int y;
-	int z;
 } TPoint;
-
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
 
 // Print a two-dimensional array
 void printMap (char **map, int **dist) {
 	int x,y;
 	for(y=0; y<MAXY; y++) {
 		for(x=0; x<MAXX; x++) {
-			if(dist && dist[y][x]) printf("%d", dist[y][x]%10);
-			else printf("%c", map[y][x]);
+			if(dist && dist[y][x]) printf("%2d", dist[y][x]%100);
+			else printf("%c%c", map[y][x],map[y][x]);
 		}
 		printf("\n");
 	}
 }
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
 
 // Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
 int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
@@ -90,7 +77,7 @@ char **readInput() {
 	return map;
 }
 
-int count(char **map, TPoint S, TPoint E) {
+int **populateDist(char **map, TPoint S, TPoint E) {
 	int x,y;
 	int **dist=calloc(MAXY,sizeof(int*));
 	for(int iter=0; iter<MAXY; iter++) dist[iter]=calloc(MAXX,sizeof(int));
@@ -117,18 +104,33 @@ int count(char **map, TPoint S, TPoint E) {
 //		printMap(map, dist);
 	}
 
-	int ret=dist[E.y][E.x]-1;
-	for(int iter=0; iter<MAXY; iter++) free(dist[iter]);
-	free(dist);
+	return(dist);	
+}
 
-	return(ret);	
+int save(char **map, int **dist, int sy, int sx) {
+
+	int fy=sy-20 < 1? 1 : sy-20;
+	int fx=sx-20 < 1? 1 : sx-20;
+	int ty=sy+20 >= MAXY ? MAXY-1 : sy+20;
+	int tx=sx+20 >= MAXX ? MAXX-1 : sx+20;
+
+	int ret=0;
+	for(int y=fy; y<=ty; y++) {
+		for(int x=fx; x<=tx; x++) {
+			int chdist=abs(sx-x)+abs(sy-y);
+			if(chdist > 20) continue;
+			if(map[y][x]!='.') continue;
+			if(dist[y][x]-dist[sy][sx]-chdist >= MINSAVE) ret++;
+		}
+	}
+
+	return ret;
 }
 
 int main(int argc, char *argv[]) {
 
 	TPoint S,E; S.x=0; S.y=0; E.x=0; E.y=0;
 	int x,y;
-//	int i=0;	
 	char **map = readInput();
 
 	for(y=0; y<MAXY; y++) {
@@ -146,27 +148,19 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	int full = count(map, S, E);
-	printf("Full duration: %d\n", full);
+	int **dist = populateDist(map, S, E);
+	printf("Full duration: %d\n", dist[E.y][E.x]-1);
 
 	int sum=0;
-	for(y=1; y<MAXY-1; y++) {
-		printf("starting row %d\n", y);
-		for(x=1; x<MAXX-1; x++) {
-			if(map[y][x]!='#') continue;
-			map[y][x]='.';
-			int c=count(map, S, E);
-//			printf("Shortcut saves %d.\n", full-c);
-			if(full-c>=100) sum++;
-			map[y][x]='#';
+//	#pragma omp parallel for shared(sum)
+	for(int y=1; y<MAXY-1; y++) {
+		for(int x=1; x<MAXX-1; x++) {
+			if(map[y][x]!='.') continue;
+			sum+=save(map, dist, y, x);
 		}
 	}
 
-	printf("%d cheats save over 100 ps\n",sum);
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-//	for(i=0; array[i]; i++) {
-//		printf("%d\n", array[i]);
-//	}
+	printf("%d cheats save at least %d ps.\n", sum, MINSAVE);
 
 	return 0;
 }
