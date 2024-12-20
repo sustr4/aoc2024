@@ -7,12 +7,12 @@
 #include<assert.h>
 
 // Boundary and input file definitions, set as required
-//#define INPUT "input.txt"
-//#define MAXX 141
-//#define MAXY 141
-#define INPUT "unit1.txt"
-#define MAXX 15
-#define MAXY 15
+#define INPUT "input.txt"
+#define MAXX 141
+#define MAXY 141
+//#define INPUT "unit1.txt"
+//#define MAXX 15
+//#define MAXY 15
 
 // Point structure definition
 typedef struct {
@@ -90,28 +90,8 @@ char **readInput() {
 	return map;
 }
 
-int main(int argc, char *argv[]) {
-
-	TPoint S,E; S.x=0; S.y=0; E.x=0; E.y=0;
+int count(char **map, TPoint S, TPoint E) {
 	int x,y;
-//	int i=0;	
-	char **map = readInput();
-
-	for(y=0; y<MAXY; y++) {
-		for(x=0; x<MAXX; x++) {
-			if(map[y][x]=='S') {
-				S.x=x;
-				S.y=y;
-				map[y][x]='.';
-			}
-			if(map[y][x]=='E') {
-				E.x=x;
-				E.y=y;
-				map[y][x]='.';
-			}
-		}
-	}
-
 	int **dist=calloc(MAXY,sizeof(int*));
 	for(int iter=0; iter<MAXY; iter++) dist[iter]=calloc(MAXX,sizeof(int));
 	dist[S.y][S.x]=1;
@@ -134,11 +114,55 @@ int main(int argc, char *argv[]) {
 
 		if(!change) break;
 		step++;
-		printMap(map, dist);
+//		printMap(map, dist);
 	}
 
-	printf("%d\n", dist[E.y][E.x]-1);	
+	int ret=dist[E.y][E.x]-1;
+	for(int iter=0; iter<MAXY; iter++) free(dist[iter]);
+	free(dist);
 
+	return(ret);	
+}
+
+int main(int argc, char *argv[]) {
+
+	TPoint S,E; S.x=0; S.y=0; E.x=0; E.y=0;
+	int x,y;
+//	int i=0;	
+	char **map = readInput();
+
+	for(y=0; y<MAXY; y++) {
+		for(x=0; x<MAXX; x++) {
+			if(map[y][x]=='S') {
+				S.x=x;
+				S.y=y;
+				map[y][x]='.';
+			}
+			if(map[y][x]=='E') {
+				E.x=x;
+				E.y=y;
+				map[y][x]='.';
+			}
+		}
+	}
+
+	int full = count(map, S, E);
+	printf("Full duration: %d\n", full);
+
+	int sum=0;
+	for(y=1; y<MAXY-1; y++) {
+		printf("starting row %d\n", y);
+		for(x=1; x<MAXX-1; x++) {
+			if(map[y][x]!='#') continue;
+			map[y][x]='.';
+			int c=count(map, S, E);
+//			printf("Shortcut saves %d.\n", full-c);
+			if(full-c>=100) sum++;
+			map[y][x]='#';
+		}
+	}
+
+	printf("%d cheats save over 100 ps\n",sum);
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
 //	for(i=0; array[i]; i++) {
 //		printf("%d\n", array[i]);
