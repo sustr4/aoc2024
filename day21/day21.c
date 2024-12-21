@@ -7,10 +7,11 @@
 #include<assert.h>
 
 // Boundary and input file definitions, set as required
-//#define INPUT "input.txt"
+#define INPUT "input.txt"
 #define MAXX 75
-#define INPUT "unit1.txt"
+//#define INPUT "unit1.txt"
 #define MAXDEPTH 10
+#define MAXLEN 2000
 
 // Point structure definition
 typedef struct {
@@ -33,8 +34,6 @@ TPoint **arrKeyToKey;
 
 TPoint *numAbs;
 TPoint *arrAbs;
-
-char current[MAXDEPTH];
 
 // Comparator function example
 int comp(const void *a, const void *b)
@@ -116,18 +115,18 @@ void initKK() {
 //					printf("%c to %c: %d,%d\n", from, to, (arrKeyToKey[(int)from][(int)to]).x,  arrKeyToKey[(int)from][(int)to].y);
 				} } } }
 
-	// All keypads start at 'A'
-	for(int i=0; i<MAXDEPTH; i++) current[i]='A';
 }
 
 
-int arrCode(char *arr, int depth) {
+int arrCode(char *arr, int depth, int final) {
 	int ret=0;
-	for(int t=0; t<depth; t++) printf("   ");
-	printf("%s\n", arr);
+//	if(final) {
+//		for(int t=0; t<depth; t++) printf("   ");
+//		printf("%s\n", arr);
+//	}
 	if(depth==3) {
 //		printf("%s\n", arr);
-		return 1;
+		return strlen(arr);
 	}
 	char prev='A';
 
@@ -137,27 +136,31 @@ int arrCode(char *arr, int depth) {
 		int dx=move.x<0 ? -1 : 1;
 		int dy=move.y<0 ? -1 : 1;
 		// left/right first
+		int optx=INT_MAX;
 		if(!((arrAbs[(int)prev].y==0)&&(arrAbs[(int)arr[i]].x==0))) {
 			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
 			int n=0;
 			for(int x=0; x!=move.x; x+=dx) numseq[n++]=dx>0 ? '>' : '<';
 			for(int y=0; y!=move.y; y+=dy) numseq[n++]=dy>0 ? 'v' : '^';
 			numseq[n++]='A';
-			arrCode(numseq, depth+1);
+			optx=arrCode(numseq, depth+1, (i==strlen(arr)-1) && final);
 			free(numseq);
 		}
 
 		// up/down first
+		int opty=INT_MAX;
 		if(!((arrAbs[(int)arr[i]].y==0)&&(arrAbs[(int)prev].x==0))) {
 			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
 			int n=0;
 			for(int y=0; y!=move.y; y+=dy) numseq[n++]=dy>0 ? 'v' : '^';
 			for(int x=0; x!=move.x; x+=dx) numseq[n++]=dx>0 ? '>' : '<';
 			numseq[n++]='A';
-			arrCode(numseq, depth+1);
+			opty=arrCode(numseq, depth+1, (i==strlen(arr)-1) && final);
 			free(numseq);
 		}
 
+		if(optx<opty) ret+=optx;
+		else ret+=opty;
 		prev=arr[i];
 	}
 
@@ -171,33 +174,37 @@ int numCode(char *code) {
 
 	for(int i=0; i<strlen(code); i++) {
 		TPoint move=numKeyToKey[(int)prev][(int)code[i]];
-		printf("\n(from %c) num %c ([%d,%d]):\n", prev, code[i], numAbs[(int)code[i]].x, numAbs[(int)code[i]].y);
+//		printf("\n(from %c) num %c ([%d,%d]):\n", prev, code[i], numAbs[(int)code[i]].x, numAbs[(int)code[i]].y);
 		int dx=move.x<0 ? -1 : 1;
 		int dy=move.y<0 ? -1 : 1;
 
 
 		// left/right first
+		int optx=INT_MAX;
 		if(!((numAbs[(int)prev].y==3)&&(numAbs[(int)code[i]].x==0))) {
 			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
 			int n=0;
 			for(int x=0; x!=move.x; x+=dx) numseq[n++] = dx>0 ? '>' : '<';
 			for(int y=0; y!=move.y; y+=dy) numseq[n++] = dy>0 ? 'v' : '^';
 			numseq[n++]='A';
-			arrCode(numseq, 1);
+			optx=arrCode(numseq, 1, i==strlen(code)-1);
 			free(numseq);
 		}
 
 		// up/down first
+		int opty=INT_MAX;
 		if(!((numAbs[(int)prev].x==0)&&(numAbs[(int)code[i]].y==3))) {
 			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
 			int n=0;
 			for(int y=0; y!=move.y; y+=dy) numseq[n++] = dy>0 ? 'v' : '^';
 			for(int x=0; x!=move.x; x+=dx) numseq[n++] = dx>0 ? '>' : '<';
 			numseq[n++]='A';
-			arrCode(numseq, 1);
-			printf("\n");
+			opty=arrCode(numseq, 1, i==strlen(code)-1);
+//			printf("\n");
 		}
 
+		if(optx<opty) ret+=optx;
+		else ret+=opty;
 		prev=code[i];
 	}
 
@@ -213,13 +220,18 @@ int main(int argc, char *argv[]) {
 	initKK();
 
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-//	for(i=0; numcode[i]; i++) {
-	for(i=0; i<1; i++) {
+	long sum=0;
+	for(i=0; numcode[i]; i++) {
+//	for(i=0; i<1; i++) {
 		int dura=numCode(numcode[i]);
-		printf("%s: %d\n", numcode[i], dura);
+
+		int nmp=atoi(numcode[i]);
+
+		printf("%s: %d (*%d)\n", numcode[i], dura, nmp);
+		sum+=dura*nmp;
 	}
 
-	printf("\n");
+	printf("%ld\n", sum);
 
 	return 0;
 }
