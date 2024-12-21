@@ -30,6 +30,9 @@ char arrkb[2][3] = {
 	{ ' ', '^', 'A' },
 	{ '<', 'v', '>' }};
 
+TPoint **numKeyToKey;
+TPoint **arrKeyToKey;
+
 // Comparator function example
 int comp(const void *a, const void *b)
 {
@@ -97,12 +100,44 @@ char **readInput() {
 	return inst;
 }
 
+void initKK() {
+
+	numKeyToKey=calloc('A'+1, sizeof(TPoint*));
+	arrKeyToKey=calloc('A'+1, sizeof(TPoint*));
+
+	// Numeric
+	for(int fy=0; fy<4; fy++) {
+		for(int fx=0; fx<3; fx++) {
+			char from=numkb[fy][fx];
+			numKeyToKey[(int)from]=calloc('A'+1, sizeof(TPoint));
+			for(int ty=0; ty<4; ty++) {
+				for(int tx=0; tx<3; tx++) {
+					char to=numkb[ty][tx];
+					numKeyToKey[(int)from][(int)to].y = ty-fy;
+					numKeyToKey[(int)from][(int)to].x = tx-fx;
+//					printf("%c to %c: %d,%d\n", from, to, (numKeyToKey[(int)from][(int)to]).x,  numKeyToKey[(int)from][(int)to].y);
+				} } } }
+	// Directional arrows:
+	for(int fy=0; fy<2; fy++) {
+		for(int fx=0; fx<3; fx++) {
+			char from=arrkb[fy][fx];
+			arrKeyToKey[(int)from]=calloc('A'+1, sizeof(TPoint));
+			for(int ty=0; ty<2; ty++) {
+				for(int tx=0; tx<3; tx++) {
+					char to=arrkb[ty][tx];
+					arrKeyToKey[(int)from][(int)to].y = ty-fy;
+					arrKeyToKey[(int)from][(int)to].x = tx-fx;
+//					printf("%c to %c: %d,%d\n", from, to, (arrKeyToKey[(int)from][(int)to]).x,  arrKeyToKey[(int)from][(int)to].y);
+				} } } }
+}
+
 int main(int argc, char *argv[]) {
 
 //	TPoint *array;
 	int i=0;	
 //	array = readInput();
 	char **numcode = readInput();
+	initKK();
 
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
 	for(i=0; numcode[i]; i++) {
