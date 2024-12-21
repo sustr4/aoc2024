@@ -11,13 +11,21 @@
 #define MAXX 75
 //#define INPUT "unit1.txt"
 #define MAXDEPTH 10
-#define MAXLEN 2000
+#define MAXHLEN 200000
 
 // Point structure definition
 typedef struct {
 	int x;
 	int y;
 } TPoint;
+
+typedef struct {
+	char *str;
+	int depth;
+	long long val;
+} THist;
+
+THist *hist;
 
 char numkb[4][3] = {
 	{ '7', '8', '9' },
@@ -117,14 +125,31 @@ void initKK() {
 
 }
 
+long long arrCode(char *arr, int depth);
 
-int arrCode(char *arr, int depth, int final) {
-	int ret=0;
-//	if(final) {
-//		for(int t=0; t<depth; t++) printf("   ");
-//		printf("%s\n", arr);
-//	}
-	if(depth==3) {
+long long arrCodeWrap(char *arr, int depth) {
+	long long ret=0;
+	int i;
+
+	for(i=0; hist[i].str; i++) {
+		if(hist[i].depth!=depth) continue;
+		if(!strcmp(arr, hist[i].str)) return hist[i].val;
+	}
+
+	if(i>=MAXHLEN) printf("Cache full\n");
+
+	ret=arrCode(arr, depth);
+
+	hist[i].str=strdup(arr);
+	hist[i].depth=depth;
+	hist[i].val=ret;
+		
+	return(ret);
+}
+
+long long arrCode(char *arr, int depth) {
+	long long ret=0;
+	if(depth==26) {
 //		printf("%s\n", arr);
 		return strlen(arr);
 	}
@@ -136,26 +161,26 @@ int arrCode(char *arr, int depth, int final) {
 		int dx=move.x<0 ? -1 : 1;
 		int dy=move.y<0 ? -1 : 1;
 		// left/right first
-		int optx=INT_MAX;
+		long long optx=LLONG_MAX;
 		if(!((arrAbs[(int)prev].y==0)&&(arrAbs[(int)arr[i]].x==0))) {
 			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
 			int n=0;
 			for(int x=0; x!=move.x; x+=dx) numseq[n++]=dx>0 ? '>' : '<';
 			for(int y=0; y!=move.y; y+=dy) numseq[n++]=dy>0 ? 'v' : '^';
 			numseq[n++]='A';
-			optx=arrCode(numseq, depth+1, (i==strlen(arr)-1) && final);
+			optx=arrCodeWrap(numseq, depth+1);
 			free(numseq);
 		}
 
 		// up/down first
-		int opty=INT_MAX;
+		long long opty=LLONG_MAX;
 		if(!((arrAbs[(int)arr[i]].y==0)&&(arrAbs[(int)prev].x==0))) {
 			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
 			int n=0;
 			for(int y=0; y!=move.y; y+=dy) numseq[n++]=dy>0 ? 'v' : '^';
 			for(int x=0; x!=move.x; x+=dx) numseq[n++]=dx>0 ? '>' : '<';
 			numseq[n++]='A';
-			opty=arrCode(numseq, depth+1, (i==strlen(arr)-1) && final);
+			opty=arrCodeWrap(numseq, depth+1);
 			free(numseq);
 		}
 
@@ -168,8 +193,8 @@ int arrCode(char *arr, int depth, int final) {
 }
 
 
-int numCode(char *code) {
-	int ret=0;
+long long numCode(char *code) {
+	long long ret=0;
 	char prev='A';
 
 	for(int i=0; i<strlen(code); i++) {
@@ -180,26 +205,26 @@ int numCode(char *code) {
 
 
 		// left/right first
-		int optx=INT_MAX;
+		long long optx=LLONG_MAX;
 		if(!((numAbs[(int)prev].y==3)&&(numAbs[(int)code[i]].x==0))) {
 			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
 			int n=0;
 			for(int x=0; x!=move.x; x+=dx) numseq[n++] = dx>0 ? '>' : '<';
 			for(int y=0; y!=move.y; y+=dy) numseq[n++] = dy>0 ? 'v' : '^';
 			numseq[n++]='A';
-			optx=arrCode(numseq, 1, i==strlen(code)-1);
+			optx=arrCode(numseq, 1);
 			free(numseq);
 		}
 
 		// up/down first
-		int opty=INT_MAX;
+		long long opty=LLONG_MAX;
 		if(!((numAbs[(int)prev].x==0)&&(numAbs[(int)code[i]].y==3))) {
 			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
 			int n=0;
 			for(int y=0; y!=move.y; y+=dy) numseq[n++] = dy>0 ? 'v' : '^';
 			for(int x=0; x!=move.x; x+=dx) numseq[n++] = dx>0 ? '>' : '<';
 			numseq[n++]='A';
-			opty=arrCode(numseq, 1, i==strlen(code)-1);
+			opty=arrCode(numseq, 1);
 //			printf("\n");
 		}
 
@@ -220,18 +245,21 @@ int main(int argc, char *argv[]) {
 	initKK();
 
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-	long sum=0;
+	long long sum=0;
+
+	hist=calloc(MAXHLEN, sizeof(THist));
+
 	for(i=0; numcode[i]; i++) {
 //	for(i=0; i<1; i++) {
-		int dura=numCode(numcode[i]);
+		long long dura=numCode(numcode[i]);
 
 		int nmp=atoi(numcode[i]);
 
-		printf("%s: %d (*%d)\n", numcode[i], dura, nmp);
+		printf("%s: %lld (*%d)\n", numcode[i], dura, nmp);
 		sum+=dura*nmp;
 	}
 
-	printf("%ld\n", sum);
+	printf("%lld\n", sum);
 
 	return 0;
 }
