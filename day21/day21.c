@@ -7,12 +7,10 @@
 #include<assert.h>
 
 // Boundary and input file definitions, set as required
-#define INPUT "input.txt"
-#define MAXX 76
-#define MAXY 26
-//#define INPUT "unit1.txt"
-//#define MAXX 10
-//#define MAXY 10
+//#define INPUT "input.txt"
+#define MAXX 75
+#define INPUT "unit1.txt"
+#define MAXDEPTH 10
 
 // Point structure definition
 typedef struct {
@@ -33,6 +31,11 @@ char arrkb[2][3] = {
 TPoint **numKeyToKey;
 TPoint **arrKeyToKey;
 
+TPoint *numAbs;
+TPoint *arrAbs;
+
+char current[MAXDEPTH];
+
 // Comparator function example
 int comp(const void *a, const void *b)
 {
@@ -44,29 +47,6 @@ int comp(const void *a, const void *b)
 // Example for calling qsort()
 //qsort(array,count,sizeof(),comp);
 
-
-// Print a two-dimensional array
-void printMap (char **map) {
-	int x,y;
-	for(y=0; y<MAXY; y++) {
-		for(x=0; x<MAXX; x++) {
-			printf("%c", map[y][x]);
-		}
-		printf("\n");
-	}
-}
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
-
-// Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
-int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
-int dx[] = { -1,  0,  1, 1, 1, 0, -1, -1};
-char mapnb(char **map, int y, int x, int n) {
-	assert((n>=0) && (n<8));
-	if((y+dy[n]<0) || (y+dy[n]>=MAXY) ||
-	   (x+dx[n]<0) || (x+dx[n]>=MAXX)) return 0;
-	return(map[y+dy[n]][x+dx[n]]);
-}
 
 // Read input file line by line (e.g., into an array)
 char **readInput() {
@@ -102,14 +82,18 @@ char **readInput() {
 
 void initKK() {
 
-	numKeyToKey=calloc('A'+1, sizeof(TPoint*));
-	arrKeyToKey=calloc('A'+1, sizeof(TPoint*));
+	numKeyToKey=calloc('v'+1, sizeof(TPoint*));
+	arrKeyToKey=calloc('v'+1, sizeof(TPoint*));
+
+	numAbs=calloc('v'+1, sizeof(TPoint));
+	arrAbs=calloc('v'+1, sizeof(TPoint));
 
 	// Numeric
 	for(int fy=0; fy<4; fy++) {
 		for(int fx=0; fx<3; fx++) {
 			char from=numkb[fy][fx];
-			numKeyToKey[(int)from]=calloc('A'+1, sizeof(TPoint));
+			numAbs[(int)from].x=fx; numAbs[(int)from].y=fy;
+			numKeyToKey[(int)from]=calloc('v'+1, sizeof(TPoint));
 			for(int ty=0; ty<4; ty++) {
 				for(int tx=0; tx<3; tx++) {
 					char to=numkb[ty][tx];
@@ -117,11 +101,13 @@ void initKK() {
 					numKeyToKey[(int)from][(int)to].x = tx-fx;
 //					printf("%c to %c: %d,%d\n", from, to, (numKeyToKey[(int)from][(int)to]).x,  numKeyToKey[(int)from][(int)to].y);
 				} } } }
+
 	// Directional arrows:
 	for(int fy=0; fy<2; fy++) {
 		for(int fx=0; fx<3; fx++) {
 			char from=arrkb[fy][fx];
-			arrKeyToKey[(int)from]=calloc('A'+1, sizeof(TPoint));
+			arrAbs[(int)from].x=fx; arrAbs[(int)from].y=fy;
+			arrKeyToKey[(int)from]=calloc('v'+1, sizeof(TPoint));
 			for(int ty=0; ty<2; ty++) {
 				for(int tx=0; tx<3; tx++) {
 					char to=arrkb[ty][tx];
@@ -129,6 +115,93 @@ void initKK() {
 					arrKeyToKey[(int)from][(int)to].x = tx-fx;
 //					printf("%c to %c: %d,%d\n", from, to, (arrKeyToKey[(int)from][(int)to]).x,  arrKeyToKey[(int)from][(int)to].y);
 				} } } }
+
+	// All keypads start at 'A'
+	for(int i=0; i<MAXDEPTH; i++) current[i]='A';
+}
+
+
+int arrCode(char *arr, int depth) {
+	int ret=0;
+	for(int t=0; t<depth; t++) printf("   ");
+	printf("%s\n", arr);
+	if(depth==3) {
+//		printf("%s\n", arr);
+		return 1;
+	}
+	char prev='A';
+
+	for(int i=0; i<strlen(arr); i++) {
+		TPoint move=arrKeyToKey[(int)prev][(int)arr[i]];
+
+		int dx=move.x<0 ? -1 : 1;
+		int dy=move.y<0 ? -1 : 1;
+		// left/right first
+		if(!((arrAbs[(int)prev].y==0)&&(arrAbs[(int)arr[i]].x==0))) {
+			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
+			int n=0;
+			for(int x=0; x!=move.x; x+=dx) numseq[n++]=dx>0 ? '>' : '<';
+			for(int y=0; y!=move.y; y+=dy) numseq[n++]=dy>0 ? 'v' : '^';
+			numseq[n++]='A';
+			arrCode(numseq, depth+1);
+			free(numseq);
+		}
+
+		// up/down first
+		if(!((arrAbs[(int)arr[i]].y==0)&&(arrAbs[(int)prev].x==0))) {
+			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
+			int n=0;
+			for(int y=0; y!=move.y; y+=dy) numseq[n++]=dy>0 ? 'v' : '^';
+			for(int x=0; x!=move.x; x+=dx) numseq[n++]=dx>0 ? '>' : '<';
+			numseq[n++]='A';
+			arrCode(numseq, depth+1);
+			free(numseq);
+		}
+
+		prev=arr[i];
+	}
+
+	return ret;
+}
+
+
+int numCode(char *code) {
+	int ret=0;
+	char prev='A';
+
+	for(int i=0; i<strlen(code); i++) {
+		TPoint move=numKeyToKey[(int)prev][(int)code[i]];
+		printf("\n(from %c) num %c ([%d,%d]):\n", prev, code[i], numAbs[(int)code[i]].x, numAbs[(int)code[i]].y);
+		int dx=move.x<0 ? -1 : 1;
+		int dy=move.y<0 ? -1 : 1;
+
+
+		// left/right first
+		if(!((numAbs[(int)prev].y==3)&&(numAbs[(int)code[i]].x==0))) {
+			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
+			int n=0;
+			for(int x=0; x!=move.x; x+=dx) numseq[n++] = dx>0 ? '>' : '<';
+			for(int y=0; y!=move.y; y+=dy) numseq[n++] = dy>0 ? 'v' : '^';
+			numseq[n++]='A';
+			arrCode(numseq, 1);
+			free(numseq);
+		}
+
+		// up/down first
+		if(!((numAbs[(int)prev].x==0)&&(numAbs[(int)code[i]].y==3))) {
+			char *numseq=calloc(abs(move.x)+abs(move.y)+2,sizeof(char));
+			int n=0;
+			for(int y=0; y!=move.y; y+=dy) numseq[n++] = dy>0 ? 'v' : '^';
+			for(int x=0; x!=move.x; x+=dx) numseq[n++] = dx>0 ? '>' : '<';
+			numseq[n++]='A';
+			arrCode(numseq, 1);
+			printf("\n");
+		}
+
+		prev=code[i];
+	}
+
+	return ret;
 }
 
 int main(int argc, char *argv[]) {
@@ -140,9 +213,13 @@ int main(int argc, char *argv[]) {
 	initKK();
 
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-	for(i=0; numcode[i]; i++) {
-		printf("%s\n", numcode[i]);
+//	for(i=0; numcode[i]; i++) {
+	for(i=0; i<1; i++) {
+		int dura=numCode(numcode[i]);
+		printf("%s: %d\n", numcode[i], dura);
 	}
+
+	printf("\n");
 
 	return 0;
 }
