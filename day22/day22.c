@@ -63,23 +63,6 @@ long long next(long long val) {
 	return(ret);
 }
 
-long long sell(long long r, long long *chng, long long *diff) {
-	for(int y=0; y<2000; y++) {
-		for(int j=0; j<3; j++) diff[j]=diff[j+1]; // shift history
-		long long new = next(r);
-		diff[3]=(new%10) - (r%10);
-		r=new;
-//		printf("%10lld: %lld (%lld (... %lld %lld %lld))\n", r, r%10, diff[3], diff[2], diff[1], diff[0]);
-		if((y>3)&&
-		   (chng[0]==diff[0]) &&
-		   (chng[1]==diff[1]) &&
-		   (chng[2]==diff[2]) &&
-		   (chng[3]==diff[3])) return r%10;
-	}
-
-	return 0;
-}
-
 int main(int argc, char *argv[]) {
 
 //	TPoint *array;
@@ -91,24 +74,50 @@ int main(int argc, char *argv[]) {
 	long long *chng=calloc(4,sizeof(long long));
 	long long *diff=calloc(4,sizeof(long long));
 
+
+	long long *****price=malloc(19*sizeof(long long****));;
+
 	for(chng[0]=-9; chng[0]<10; chng[0]++) {
-	  printf("Trying oldest change %lld\n",chng[0]); 
+	  price[chng[0]+9]=malloc(19*sizeof(long long***));
+	  for(chng[1]=-9; chng[1]<10; chng[1]++) {
+	    price[chng[0]+9][chng[1]+9]=malloc(19*sizeof(long long**));
+	    for(chng[2]=-9; chng[2]<10; chng[2]++) {
+	      price[chng[0]+9][chng[1]+9][chng[2]+9]=malloc(19*sizeof(long long*));
+	      for(chng[3]=-9; chng[3]<10; chng[3]++) {
+	        price[chng[0]+9][chng[1]+9][chng[2]+9][chng[3]+9]=malloc(MAXY*sizeof(long long));
+		for(i=0; buyer[i]; i++) {
+		price[chng[0]+9][chng[1]+9][chng[2]+9][chng[3]+9][i]=-1;
+	}}}}}
+
+
+
+	for(i=0; buyer[i]; i++) {
+		long long r=buyer[i];
+		for(int y=0; y<2000; y++) {
+			for(int j=0; j<3; j++) diff[j]=diff[j+1]; // shift history
+			long long new = next(r);
+			diff[3]=(new%10) - (r%10);
+			r=new;
+			if(y<=3) continue;
+			if(price[diff[0]+9][diff[1]+9][diff[2]+9][diff[3]+9][i]<0) price[diff[0]+9][diff[1]+9][diff[2]+9][diff[3]+9][i]=r%10;
+		}
+	}
+
+
+
+	max=0;
+	for(chng[0]=-9; chng[0]<10; chng[0]++) {
 	  for(chng[1]=-9; chng[1]<10; chng[1]++) {
 	    for(chng[2]=-9; chng[2]<10; chng[2]++) {
 	      for(chng[3]=-9; chng[3]<10; chng[3]++) {
-		long long sum = 0;
-		i=0;
+		int sum=0;
 		for(i=0; buyer[i]; i++) {
-			long long sold=sell(buyer[i], chng, diff);
-//			printf("Seller %d paid %lld\n", i, sold);
-			sum+=sold;
+			if(price[chng[0]+9][chng[1]+9][chng[2]+9][chng[3]+9][i]>0)
+				sum+=price[chng[0]+9][chng[1]+9][chng[2]+9][chng[3]+9][i];
 		}
-		if(sum>max) {
-			max=sum;
-			printf("New best %lld, %lld, %lld, %lld: %lld\n",
-				chng[0], chng[1], chng[2], chng[3], max);
-		}
-	} } } }
+		if(sum>max) max=sum;
+	}}}}
+
 
 	printf ("Max: %lld\n", max);
 
