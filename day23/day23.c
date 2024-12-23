@@ -88,6 +88,8 @@ int **readInput(TComp *comp) {
 
 		comp[from].no=from;
 		comp[from].cnt++;
+		comp[to].no=to;
+		comp[to].cnt++;
 	}
 
 	fclose(input);
@@ -135,87 +137,35 @@ int main(int argc, char *argv[]) {
 	// Try starting from the computer with the most connections.
 	qsort(comp,MAXY,sizeof(TComp),comparator);
 
-	printf("Most connected "); printn(comp[0].no); printf(" (%d): %d\n", comp[0].no, comp[0].cnt);
+	for(int fromtop=0; comp[fromtop].cnt; fromtop++) {
+		int with=comp[fromtop].no;
+		printf("Trying "); printn(with); printf(" (%d): %d\n", comp[fromtop].no, comp[fromtop].cnt);
 
+		int maxm=comp[0].cnt+1;
+		int **mesh=calloc(maxm,sizeof(int*));
+		for(int iter=0; iter<maxm; iter++) mesh[iter]=calloc(maxm,sizeof(int));
 
-	int fromtop=24;
-	int with=comp[fromtop].no;
+		int *label=calloc(maxm, sizeof(int));
 
-	int maxm=comp[0].cnt+2;
-	int **mesh=calloc(maxm,sizeof(int*));
-	for(int iter=0; iter<maxm; iter++) mesh[iter]=calloc(maxm,sizeof(int));
-
-	int *label=calloc(maxm, sizeof(int));
-
-	int k=0;
-	for(int j=0; j<MAXY; j++) {
-		if((map[j][with])||(j==with)) label[k++]=j;
-	}
-	for(int i=0; i<maxm; i++) {
-		mesh[i][i]=1;
-		for(int j=i+1; j<maxm; j++) {
-			if(map[label[i]][label[j]]) {
-				mesh[i][j]=1;
-				mesh[j][i]=1;
+		int k=0;
+		for(int j=0; j<MAXY; j++) {
+			if((map[j][with])||(j==with)) label[k++]=j;
+		}
+		for(int i=0; i<maxm; i++) {
+			mesh[i][i]=1;
+			for(int j=i+1; j<maxm; j++) {
+				if(map[label[i]][label[j]]) {
+					mesh[i][j]=1;
+					mesh[j][i]=1;
+				}
 			}
 		}
+
+		printMesh(mesh, label, maxm);
+
+		free(label);
+		for(int iter=0; iter<maxm; iter++) free(mesh[iter]);
+		free(mesh);
 	}
-
-	
-	
-	printMesh(mesh, label, maxm);
-
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-
-/*
-	for(int size=3; size<MAXY; size++) {
-		printf("Trying size %d\n",size);
-		from=calloc(size,sizeof(int));
-		to=calloc(size,sizeof(int));
-		elem=calloc(size,sizeof(int));
-
-		for(int i=0; i<size; i++) {
-			from[i]=i;
-			to[i]=MAXY-size+i+1;
-			elem[i]=from[i];
-		}
-
-		while(1) {
-
-			int line=1;
-			for(int j=0; j<size-1; j++)
-				if(!map[elem[j]][elem[j+1]]) {
-					line = 0;
-					break;
-				}
-
-			if(line) { // Don't even try otherwise
-
-				int mesh=1;
-
-				for(int j=0; j<size; j++) {
-					if(meshConnections(j, elem, size, map)!=size-1) {
-						mesh=0;
-						break;
-					}
-				}
-
-				if(mesh) {
-					for(int i=0; i<size; i++) {
-						printn(elem[i]);
-						if(i!=size-1) printf(",");
-					}
-					printf("\n");
-				}
-
-			}
-
-			if(!next(elem, from, to, size)) break;
-		}
-		free(from);
-		free(to);
-		free(elem);
-	}
-*/
 	return 0;
 }
