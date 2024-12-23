@@ -13,29 +13,37 @@ int MAXY;
 
 // Point structure definition
 typedef struct {
-	int x;
-	int y;
-	int z;
-} TPoint;
+	int no;
+	int cnt;
+} TComp;
 
 // Comparator function example
-int comp(const void *a, const void *b)
+int comparator(const void *a, const void *b)
 {
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
+	const TComp *cA = (const TComp *)a;
+	const TComp *cB = (const TComp *)b;
+
+	return cB->cnt - cA->cnt;
+
 }
 
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
+int n2n(char *name) { // Name to number
+	return (name[0]-'a')*('z'-'a'+1)+(name[1]-'a');
+}
 
+void printn(int n) {
+	printf("%c",n/('z'-'a'+1)+'a');
+	printf("%c",n%('z'-'a'+1)+'a');
+}
 
 // Print a two-dimensional array
-void printMap (char **map) {
+void printMesh (int **mesh, int *label, int maxm) {
 	int x,y;
-	for(y=0; y<MAXY; y++) {
-		for(x=0; x<MAXY; x++) {
-			printf("%c", map[y][x]);
+	for(y=0; y<maxm; y++) {
+		printn(label[y]); printf(" (%3d): ", label[y]);
+		for(x=0; x<maxm; x++) {
+			if(mesh[y][x]) printf("%3d", mesh[y][x]);
+			else printf("\033[1;31m%3d\033[0m", mesh[y][x]);
 		}
 		printf("\n");
 	}
@@ -53,17 +61,8 @@ char mapnb(char **map, int y, int x, int n) {
 	return(map[y+dy[n]][x+dx[n]]);
 }
 
-int n2n(char *name) { // Name to number
-	return (name[0]-'a')*('z'-'a'+1)+(name[1]-'a');
-}
-
-void printn(int n) {
-	printf("%c",n/('z'-'a'+1)+'a');
-	printf("%c",n%('z'-'a'+1)+'a');
-}
-
 // Read input file line by line (e.g., into an array)
-int **readInput() {
+int **readInput(TComp *comp) {
 	FILE * input;
 	char * line = NULL;
 	size_t len = 0;
@@ -74,7 +73,6 @@ int **readInput() {
 		fprintf(stderr,"Failed to open input file\n");
 		exit(1); }
 
-	MAXY=n2n("zz");
 
 	int **map=calloc(MAXY,sizeof(int*));
 	for(int iter=0; iter<MAXY; iter++) map[iter]=calloc(MAXY,sizeof(int));
@@ -88,6 +86,8 @@ int **readInput() {
 		map[from][to]=1;
 		map[to][from]=1;
 
+		comp[from].no=from;
+		comp[from].cnt++;
 	}
 
 	fclose(input);
@@ -97,35 +97,125 @@ int **readInput() {
 	return map;
 }
 
+int next(int *elem, int *from, int *to, int size) {
+
+	elem[size-1]++;
+	for(int j=size-1; j>0; j--)
+		if(elem[j]>to[j]) {
+			elem[j-1]++;
+			elem[j]=from[j-1];
+		}
+	if(elem[0]>to[0]) return 0;
+
+	for(int j=0; j<size-1; j++)
+		if(elem[j+1]<=elem[j]) elem[j+1]=elem[j]+1;
+
+	return 1;
+}
+
+int meshConnections(int e, int *elem, int size, int **map) {
+	int sum=0;
+	for(int i=0; i<size; i++) 
+		if(map[elem[e]][elem[i]]) sum++;
+
+//	printf("Connections %d: %d\n", e, sum);
+	return sum;
+}
+
 int main(int argc, char *argv[]) {
 
-//	TPoint *array;
+//	TComp *array;
 //	int i=0;	
 //	array = readInput();
-	int **map=readInput();
+	MAXY=n2n("zz");
+	TComp *comp=calloc(MAXY,sizeof(TComp));
+	int **map=readInput(comp);
+//	int *from, *to, *elem;
 
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-	int sum=0;
-	for(int i=0; i<MAXY-2; i++) {
-		for(int j=i+1; j<MAXY-1; j++) {
-			for(int k=j+1; k<MAXY; k++) {
-				if(map[i][j] &&
-				   map[j][k] &&
-				   map[i][k]) {
-					sum++;
-					printn(i);
-					printf("-");
-					printn(j);
-					printf("-");
-					printn(k);
-					printf("\n");
-				}
+	// Try starting from the computer with the most connections.
+	qsort(comp,MAXY,sizeof(TComp),comparator);
+
+	printf("Most connected "); printn(comp[0].no); printf(" (%d): %d\n", comp[0].no, comp[0].cnt);
+
+
+	int fromtop=24;
+	int with=comp[fromtop].no;
+
+	int maxm=comp[0].cnt+2;
+	int **mesh=calloc(maxm,sizeof(int*));
+	for(int iter=0; iter<maxm; iter++) mesh[iter]=calloc(maxm,sizeof(int));
+
+	int *label=calloc(maxm, sizeof(int));
+
+	int k=0;
+	for(int j=0; j<MAXY; j++) {
+		if((map[j][with])||(j==with)) label[k++]=j;
+	}
+	for(int i=0; i<maxm; i++) {
+		mesh[i][i]=1;
+		for(int j=i+1; j<maxm; j++) {
+			if(map[label[i]][label[j]]) {
+				mesh[i][j]=1;
+				mesh[j][i]=1;
 			}
 		}
 	}
 
-	printf("Sum: %d\n", sum);
+	
+	
+	printMesh(mesh, label, maxm);
 
+//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
 
+/*
+	for(int size=3; size<MAXY; size++) {
+		printf("Trying size %d\n",size);
+		from=calloc(size,sizeof(int));
+		to=calloc(size,sizeof(int));
+		elem=calloc(size,sizeof(int));
+
+		for(int i=0; i<size; i++) {
+			from[i]=i;
+			to[i]=MAXY-size+i+1;
+			elem[i]=from[i];
+		}
+
+		while(1) {
+
+			int line=1;
+			for(int j=0; j<size-1; j++)
+				if(!map[elem[j]][elem[j+1]]) {
+					line = 0;
+					break;
+				}
+
+			if(line) { // Don't even try otherwise
+
+				int mesh=1;
+
+				for(int j=0; j<size; j++) {
+					if(meshConnections(j, elem, size, map)!=size-1) {
+						mesh=0;
+						break;
+					}
+				}
+
+				if(mesh) {
+					for(int i=0; i<size; i++) {
+						printn(elem[i]);
+						if(i!=size-1) printf(",");
+					}
+					printf("\n");
+				}
+
+			}
+
+			if(!next(elem, from, to, size)) break;
+		}
+		free(from);
+		free(to);
+		free(elem);
+	}
+*/
 	return 0;
 }
