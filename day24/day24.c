@@ -145,7 +145,7 @@ TComp *readInput(TRule *rule) {
 			token = strtok(NULL, " "); // Arrow
 
 			token = strtok(NULL, " "); // Output
-			rule[count].in[1]=cid(token, comp);
+			rule[count].out=cid(token, comp);
 
 			count++;
 
@@ -167,8 +167,31 @@ int main(int argc, char *argv[]) {
 	TComp *comp = readInput(rule);
 
 //	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-	for(i=0; rule[i].type; i++) {
-		printf("%d(%s) %d %d\n", rule[i].in[0], comp[rule[i].in[0]].name, rule[i].type, rule[i].in[1]);
+	while (1) {
+		int change=0;
+		for(i=0; rule[i].type; i++) {
+			int ret;
+			switch(rule[i].type) {
+			case 2: // AND
+				ret = comp[rule[i].in[0]].out && comp[rule[i].in[1]].out;
+				break;
+			case 3: // OR
+				ret = comp[rule[i].in[0]].out || comp[rule[i].in[1]].out;
+			case 4: // XOR
+				ret = comp[rule[i].in[0]].out != comp[rule[i].in[1]].out;
+			}
+			if(comp[rule[i].out].out!=ret) {
+				printf("%d(%s) %d %d -> %s\n", rule[i].in[0], comp[rule[i].in[0]].name, rule[i].type, rule[i].in[1], comp[rule[i].out].name);
+				printf("Rule %3d type %d setting %s (%d) from %d to %d\n", i, rule[i].type, comp[rule[i].out].name, rule[i].out, ret, comp[rule[i].out].out);
+				comp[rule[i].out].out = ret;
+				change=1;
+			}
+		}
+		if(!change) break;
+	}
+
+	for(i=0; comp[i].name; i++) {
+		if(comp[i].name[0]=='z') printf("%s %d\n", comp[i].name, comp[i].out);
 	}
 
 	return 0;
