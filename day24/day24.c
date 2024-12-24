@@ -11,9 +11,6 @@
 #define MAXX 50
 #define MAXY 4000
 int MAXW;
-//#define INPUT "unit1.txt"
-//#define MAXX 10
-//#define MAXY 10
 
 // Point structure definition
 typedef struct {
@@ -28,41 +25,6 @@ typedef struct {
 	int out;
 } TRule;
 
-
-// Comparator function example
-int comp(const void *a, const void *b)
-{
-	const int *da = (const int *) a;
-	const int *db = (const int *) b;
-	return (*da > *db) - (*da < *db);
-}
-
-// Example for calling qsort()
-//qsort(array,count,sizeof(),comp);
-
-
-// Print a two-dimensional array
-void printMap (char **map) {
-	int x,y;
-	for(y=0; y<MAXY; y++) {
-		for(x=0; x<MAXX; x++) {
-			printf("%c", map[y][x]);
-		}
-		printf("\n");
-	}
-}
-// Full block character for maps █ and border elements ┃━┗┛┏┓
-// Color printf("\033[1;31mR \033[1;32mG \033[1;34mB \033[0moff\n");
-
-// Retrieve nth neighbor from a map, diagonals are odd, side neighbors even
-int dy[] = { -1, -1, -1, 0, 1, 1,  1,  0};
-int dx[] = { -1,  0,  1, 1, 1, 0, -1, -1};
-char mapnb(char **map, int y, int x, int n) {
-	assert((n>=0) && (n<8));
-	if((y+dy[n]<0) || (y+dy[n]>=MAXY) ||
-	   (x+dx[n]<0) || (x+dx[n]>=MAXX)) return 0;
-	return(map[y+dy[n]][x+dx[n]]);
-}
 
 int cid (char *nm, TComp *comp) { // Component ID
 	int id;
@@ -87,12 +49,8 @@ TComp *readInput(TRule *rule) {
 		fprintf(stderr,"Failed to open input file\n");
 		exit(1); }
 
-	// Allocate one-dimensional array of strings
-	// char **inst=(char**)calloc(MAXX, sizeof(char*));
 	TComp *comp=(TComp*)calloc(MAXY, sizeof(TComp));
 
-	// Allocate a two-dimensional arrray of chars
-	// int x=0, y=0;
 	char **wire=calloc(2,sizeof(char*));
 	for(int iter=0; iter<2; iter++) wire[iter]=calloc(MAXX,sizeof(char));
 
@@ -228,6 +186,7 @@ int adder(int no, TComp *comp, TRule *rule, int *carry) {
 
 	int Ci1=-1;
 	int Ci2=-1;
+	int a1=0;
 
 	if(no!=0) {
 		int x2;
@@ -237,38 +196,35 @@ int adder(int no, TComp *comp, TRule *rule, int *carry) {
 		}
 		if(rule[x2].type!=4) {
 			retval=0;
-			printf("\033[1;31m%d does not go to another XOR\033[0m\n", x2);
+			printf("\033[1;31m%d (%s) does not go to another XOR\033[0m\n", x2, comp[rule[x2].out].name);
 		}
 		printf("      that goes into XOR %d (", x2);
 		printRule(rule[x2], comp);
 		printf(")\n");
 		Ci1 = rule[x2].in[0] == rule[x1].out ? rule[x2].in[1] : rule[x2].in[0];
-		printf("        together with Carry in %d\n", Ci1);
+		printf("        together with Carry in %d (%s)\n", Ci1, comp[Ci1].name);
+
+		for(a1=0; rule[a1].type; a1++) {
+			if(rule[a1].type!=2) continue;
+			if((rule[a1].in[0]==rule[x1].out)||(rule[a1].in[1]==rule[x1].out)) break;
+		}
+		if(rule[a1].type!=2) {
+			retval=0;
+			printf("\033[1;31mInput %d not ANDed\033[0m\n", no);
+		}
+		printf("      that goes into AND %d (", a1);
+		printRule(rule[a1], comp);
+		printf(")\n");
+		
+		Ci2 = rule[a1].in[0] == rule[x1].out ? rule[a1].in[1] : rule[a1].in[0];
+		printf("        together with Carry in %d (%s)\n", Ci2, comp[Ci2].name);
+
+		if((Ci1>=0)&&(Ci1!=Ci2)) {
+			retval=0;
+			printf("\033[1;31mCarry inputs do not match at %d\033[0m\n", no);
+		}
+
 	}
-
-
-
-	int a1;
-	for(a1=0; rule[a1].type; a1++) {
-		if(rule[a1].type!=2) continue;
-		if((rule[a1].in[0]==rule[x1].out)||(rule[a1].in[1]==rule[x1].out)) break;
-	}
-	if(rule[a1].type!=2) {
-		retval=0;
-		printf("\033[1;31mInput %d not ANDed\033[0m\n", no);
-	}
-	printf("      that goes into AND %d (", a1);
-	printRule(rule[a1], comp);
-	printf(")\n");
-	
-	Ci2 = rule[a1].in[0] == rule[x1].out ? rule[a1].in[1] : rule[a1].in[0];
-	printf("        together with Carry in %d\n", Ci2);
-
-	if((Ci1>=0)&&(Ci1!=Ci2)) {
-		retval=0;
-		printf("\033[1;31mCarry inputs do not match at %d\033[0m\n", no);
-	}
-
 	
 	int a2;
 	for(a2=0; rule[a2].type; a2++) {
@@ -284,30 +240,36 @@ int adder(int no, TComp *comp, TRule *rule, int *carry) {
 	printRule(rule[a2], comp);
 	printf(")\n");
 
-	int o2;
-	for(o2=0; rule[o2].type; o2++) {
-		if(rule[o2].type!=3) continue;
-		if(((rule[o2].in[0]==rule[a1].out)&&(rule[o2].in[1]==rule[a2].out)) ||
-		   ((rule[o2].in[0]==rule[a2].out)&&(rule[o2].in[1]==rule[a1].out))) break;
+	if(no>0) {
+		int o2;
+		for(o2=0; rule[o2].type; o2++) {
+			if(rule[o2].type!=3) continue;
+			if(((rule[o2].in[0]==rule[a1].out)&&(rule[o2].in[1]==rule[a2].out)) ||
+			   ((rule[o2].in[0]==rule[a2].out)&&(rule[o2].in[1]==rule[a1].out))) break;
+		}
+		if(rule[o2].type!=3) {
+			retval=0;
+			printf("\033[1;31m sum (%s) and carry (%s) at %d not ORed\033[0m\n", comp[rule[a2].out].name, comp[rule[a1].out].name, no);
+		}
+
+		printf("      that goes to OR %d (", o2);
+		printRule(rule[o2], comp);
+		printf(")\n");
+
+
+		int Co = rule[o2].out;
+		carry[no]=Co;
+		printf("        and produces Carry out %d (%s)\n", Co, comp[Co].name);
+		
+
+		if((no>0)&&(Ci2!=carry[no-1])) {
+			retval=0;
+			printf("\033[1;31m Wrong carry at %d. This stage expects carry at %d, stage %d outputs at %d \033[0m\n", no, Ci2, no-1, carry[no-1]);
+		}
 	}
-	if(rule[o2].type!=3) {
-		retval=0;
-		printf("\033[1;31m sum and carry at %d not ORed\033[0m\n", no);
-	}
-
-	printf("      that goes to OR %d (", o2);
-	printRule(rule[o2], comp);
-	printf(")\n");
-
-
-	int Co = rule[o2].out;
-	carry[no]=Co;
-	printf("        and produces Carry out %d (%s)\n", Co, comp[Co].name);
-	
-
-	if((no>0)&&(Ci2!=carry[no-1])) {
-		retval=0;
-		printf("\033[1;31m Wrong carry at %d. %d != %d \033[0m\n", no, Ci2, carry[no-1]);
+	else {
+		carry[no]=rule[a2].out;
+		printf("        and produces Carry out %d (%s)\n", carry[no], comp[carry[no]].name);
 	}
 
 	return retval;	
@@ -315,43 +277,13 @@ int adder(int no, TComp *comp, TRule *rule, int *carry) {
 
 int main(int argc, char *argv[]) {
 
-//	int i=0;	
-//	array = readInput();
 	TRule *rule=(TRule*)calloc(MAXY, sizeof(TRule));
 	TComp *comp = readInput(rule);
 
 	int *carry=(int*)calloc(MAXX, sizeof(int));
 
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
-/*	while (1) {
-		int change=0;
-		for(i=0; rule[i].type; i++) {
-			int ret;
-			switch(rule[i].type) {
-			case 2: // AND
-				ret = comp[rule[i].in[0]].out && comp[rule[i].in[1]].out;
-				break;
-			case 3: // OR
-				ret = comp[rule[i].in[0]].out || comp[rule[i].in[1]].out;
-			case 4: // XOR
-				ret = comp[rule[i].in[0]].out != comp[rule[i].in[1]].out;
-			}
-			if(comp[rule[i].out].out!=ret) {
-				printf("%d(%s) %d %d -> %s\n", rule[i].in[0], comp[rule[i].in[0]].name, rule[i].type, rule[i].in[1], comp[rule[i].out].name);
-				printf("Rule %3d type %d setting %s (%d) from %d to %d\n", i, rule[i].type, comp[rule[i].out].name, rule[i].out, ret, comp[rule[i].out].out);
-				comp[rule[i].out].out = ret;
-				change=1;
-			}
-		}
-		if(!change) break;
-	}
-
-	for(i=0; comp[i].name; i++) {
-		if(comp[i].name[0]=='z') printf("%s %d\n", comp[i].name, comp[i].out);
-	}*/
-
 	for(int q=0; q<45; q++) {
-		if(!adder(q, comp, rule, carry)); //break;
+		if(!adder(q, comp, rule, carry)) break;
 		printf("\n");
 	}
 
