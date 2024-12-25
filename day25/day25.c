@@ -77,9 +77,6 @@ void print5(int *five) {
 
 int main(int argc, char *argv[]) {
 
-//	TPoint *array;
-//	int i=0;	
-//	array = readInput();
 	int **lock=calloc(MAXY,sizeof(char*));
 	for(int iter=0; iter<MAXY; iter++) lock[iter]=calloc(MAXX,sizeof(int));
 
@@ -94,7 +91,6 @@ int main(int argc, char *argv[]) {
 //		printf("\n");
 //	}
 
-//	#pragma omp parallel for private(<uniq-var>) shared(<shared-var>)
 	int sum=0;
 	for(int l=0; lock[l][0]; l++) {
 		for(int k=0; key[k][0]; k++) {
